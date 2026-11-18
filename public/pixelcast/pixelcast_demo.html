@@ -1,0 +1,1363 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PixelCast 像素群像</title>
+<style>
+  :root{--bg:#1c1e23;--panel:#272a31;--line:#3a3e47;--tx:#e6e8ec;--dim:#8d929e;--acc:#d9dce3}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 "PingFang SC","Microsoft YaHei","Noto Sans CJK SC",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 16px 24px}
+  h1{font-size:15px;font-weight:600;margin:4px 0 0;letter-spacing:.04em}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;max-width:960px}
+  button{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:5px 12px;font:inherit;cursor:pointer}
+  button:hover{border-color:var(--dim)} button.on{background:#3b4150;border-color:#8d929e}
+  #stage{position:relative;line-height:0;border:2px solid var(--line);border-radius:4px;overflow:hidden;max-width:100%}
+  #cv{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  #ov{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .bub{position:absolute;transform:translate(-50%,-100%);background:#2a2d34;color:#eceef2;border:2px solid #9a9fab;border-radius:6px;padding:3px 8px;font-size:12px;line-height:1.4;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+  .bub:after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-5px;border:5px solid transparent;border-top-color:#9a9fab;border-bottom:0}
+  .tag{position:absolute;transform:translate(-50%,-100%);font-size:11px;color:#f1f2f5;text-shadow:0 1px 2px #000;opacity:.8;white-space:nowrap}
+  #hint{color:var(--dim);font-size:12px;text-align:center;max-width:960px}
+  kbd{background:var(--panel);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font:12px ui-monospace,monospace}
+  #cards{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:10px;max-width:1080px;width:100%}
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+  .card.sel{border-color:#d9dce3}
+  .card canvas{width:100%;image-rendering:pixelated;image-rendering:crisp-edges;background:#9a9ea9;border-radius:4px;aspect-ratio:32/30}
+  .card h3{margin:0;font-size:14px} .card h3 small{color:var(--dim);font-weight:400;margin-left:4px}
+  .card .d{font-size:12px;color:var(--dim)} .card .i{font-size:12px;color:var(--acc)}
+  .tr{display:grid;grid-template-columns:34px 1fr;gap:2px 6px;font-size:11px;color:var(--dim);align-items:center;margin-top:2px}
+  .tr i{display:block;height:4px;background:#3a3e47;border-radius:2px;position:relative} .tr i b{position:absolute;left:0;top:0;bottom:0;background:#aab0bd;border-radius:2px}
+  @media (max-width:760px){#cards{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<h1>PixelCast · 同一副骨架，六位角色与太空服/瞬移</h1>
+<div class="bar">
+  <button id="bPause">暂停</button>
+  <button id="bFast">快进 ×3</button>
+  <button id="bLine">集合对比待机</button>
+  <button id="bSuit">太空服：关</button>
+  <button id="bBlink">瞬移 (J)</button>
+  <button id="bTake">接管所选角色</button>
+</div>
+<div id="stage"><canvas id="cv"></canvas><div id="ov"></div></div>
+<div id="hint"><kbd>A</kbd><kbd>D</kbd> 走 · <kbd>Shift</kbd> 跑 · <kbd>空格</kbd> 跳（空中再按二段翻滚）· <kbd>S</kbd> 蹲 · <kbd>Y</kbd> 向最近的人搭话 · <kbd>J</kbd> 瞬移（星）· <kbd>U</kbd> 太空服 · <kbd>1</kbd>–<kbd>6</kbd> 或点击角色切换 · <kbd>T</kbd> 接管/放开</div>
+<div id="cards"></div>
+
+<script>/* PixelRig：像素人物通用骨架与渲染（无 DOM，浏览器和 Node 都能用）
+ * 角度约定：以“垂直向下”为 0，朝向前方为正，单位度。人物默认朝右，镜像得到朝左。
+ * 一个人物 = 骨架(SKELETON) + 角色规格(spec: build/look/gait/idle) + 姿势(pose)。 */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PixelRig = factory();
+})(typeof globalThis !== 'undefined' ? globalThis : (typeof self !== 'undefined' ? self : this), function () {
+  'use strict';
+  const GW = 32, GH = 80, GOFF = 30, FOOT = 45, SHY = 35;
+  const rad = d => d * Math.PI / 180;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  const SKELETON = {
+    note: '像素人物通用骨架。角度以垂直向下为0，朝前为正，单位度；默认朝右，镜像得到朝左。',
+    grid: { width: GW, height: GH, rowOffset: GOFF, footRow: FOOT, standingHipRow: SHY, spriteCell: [32, 48] },
+    defaultBuild: { thigh: 6, shin: 5, upper: 3, fore: 3 },
+    bones: [
+      { name: 'pelvis', parent: null, note: '根骨骼，髋关节在 列15.5、行hy，骨盆2行' },
+      { name: 'torso', parent: 'pelvis', length: 4, widthPx: 2, note: '躯干4行，宽2（45°视角肩宽4）；lean 让上身逐行前倾，bob 让上身整体上下 ±1 行' },
+      { name: 'neck', parent: 'torso', length: 1 },
+      { name: 'head', parent: 'neck', size: [5, 5], note: '头 5列x5行（侧面）/6列x5行（45°）。上两行全是头发，脸从第3行开始；head:[dx,dy] 可整体偏移（低头、探头）' },
+      { name: 'upperArmNear', parent: 'torso', length: 3, note: '肩在 列16+lean、行hy-7+bob，角度 na[0]' },
+      { name: 'foreArmNear', parent: 'upperArmNear', length: 3, note: '角度 na[1]，末端是手' },
+      { name: 'upperArmFar', parent: 'torso', length: 3, note: '肩在 列15+lean，画在身体后面，角度 fa[0]' },
+      { name: 'foreArmFar', parent: 'upperArmFar', length: 3, note: '角度 fa[1]' },
+      { name: 'thighNear', parent: 'pelvis', length: 6, note: '宽2像素，角度 nl[0]' },
+      { name: 'shinNear', parent: 'thighNear', length: 5, note: '角度 nl[1]（绝对角，不是相对角）' },
+      { name: 'footNear', parent: 'shinNear', length: 3, note: '脚3像素，朝前' },
+      { name: 'thighFar', parent: 'pelvis', length: 6, note: '角度 fl[0]' },
+      { name: 'shinFar', parent: 'thighFar', length: 5, note: '角度 fl[1]' },
+      { name: 'footFar', parent: 'shinFar', length: 3 },
+      { name: 'hairChain', parent: 'head', note: '马尾/长发/外套下摆：两节链，角度 tail[0]、tail[1]，表示向后下方的飘动' }
+    ],
+    view34: '待机用 45° 视角：po.v34=true；此时 na/fa 为画面左/右臂、nl/fl 为画面左/右腿，角度在画面平面内（向下为0，向画面右为正）',
+    pose: {
+      nl: '近侧腿 [大腿角, 小腿绝对角]', fl: '远侧腿', na: '近侧手臂 [上臂角, 前臂角]', fa: '远侧手臂',
+      tail: '头发/外套飘动 [第一节角, 第二节角]', lean: '躯干前倾像素 0..2（-1 为后仰）', bob: '上身下沉像素（呼吸、叹气、缩肩）',
+      head: '[dx,dy] 头部偏移', blink: '是否闭眼'
+    }
+  };
+
+  const mkG = () => Array.from({ length: GH }, () => Array(GW).fill(null));
+  function put(g, x, y, c) { x = Math.round(x); y = Math.round(y); if (c && x >= 0 && y >= 0 && x < GW && y < GH) g[y][x] = c; }
+  function line(g, x0, y0, x1, y1, c, w) {
+    x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), stx = x0 < x1 ? 1 : -1, sty = y0 < y1 ? 1 : -1;
+    let e = dx + dy;
+    while (true) {
+      for (let i = 0; i < w; i++) put(g, x0 + i, y0, c);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * e;
+      if (e2 >= dy) { e += dy; x0 += stx; }
+      if (e2 <= dx) { e += dx; y0 += sty; }
+    }
+  }
+  function legPts(b, th, sh) {
+    const kx = b.thigh * Math.sin(rad(th)), ky = b.thigh * Math.cos(rad(th));
+    return { kx, ky, ax: kx + b.shin * Math.sin(rad(sh)), ay: ky + b.shin * Math.cos(rad(sh)) };
+  }
+  function armPts(b, u, f) {
+    const ex = b.upper * Math.sin(rad(u)), ey = b.upper * Math.cos(rad(u));
+    return { ex, ey, wx: ex + b.fore * Math.sin(rad(f)), wy: ey + b.fore * Math.cos(rad(f)) };
+  }
+  function gHy(b, po) {
+    const a = legPts(b, po.nl[0], po.nl[1]), c = legPts(b, po.fl[0], po.fl[1]);
+    return FOOT - Math.max(Math.round(a.ay), Math.round(c.ay));
+  }
+  function drawLeg2(g, L, hx, hy, cols) {
+    line(g, hx, hy, hx + L.kx, hy + L.ky, cols[0], 2);
+    line(g, hx + L.kx, hy + L.ky, hx + L.ax, hy + L.ay, cols[1], 2);
+    const ax = Math.round(hx + L.ax), ay = Math.round(hy + L.ay);
+    if (cols[3]) { put(g, ax, ay - 1, cols[3]); put(g, ax + 1, ay - 1, cols[3]); }
+    for (let i = 0; i < 3; i++) put(g, ax + i, ay, cols[2]);
+  }
+  function drawArm2(g, A, sx, sy, cols, thick) {
+    if (thick) {                                      // 袖子：靠肩膀的前 2/3 上臂加粗到 2 像素
+      const px = sx + A.ex * 0.67, py = sy + A.ey * 0.67, off = thick < 0 ? -1 : 0;
+      line(g, sx + off, sy, px + off, py, cols[0], 2);
+    }
+    line(g, sx, sy, sx + A.ex, sy + A.ey, cols[0], 1);
+    line(g, sx + A.ex, sy + A.ey, sx + A.wx, sy + A.wy, cols[1], 1);
+    put(g, sx + A.wx, sy + A.wy, cols[2]);
+  }
+
+  /* 头部像素图：[dx,dy,色键]  h发 H发高光 s皮肤 e眼 a耳/皮肤暗部 x帽 X帽高光 b帽檐
+   * 侧面：5列x5行（dy=-1 是发髻/帽顶）。前两行全是头发，脸从第3行(dy=2)开始，眼睛旁边紧挨着一列皮肤 → 脸 2 列宽 */
+  const FACE = [[0,2,'h'],[1,2,'h'],[2,2,'h'],[3,2,'h'],[4,2,'s'],
+    [0,3,'h'],[1,3,'a'],[2,3,'h'],[3,3,'s'],[4,3,'s'],
+    [0,4,'h'],[1,4,'h'],[2,4,'h'],[3,4,'s'],[4,4,'s']];
+  const TOP = [[0,0,'h'],[1,0,'h'],[2,0,'H'],[3,0,'h'],[4,0,'h'],[0,1,'h'],[1,1,'h'],[2,1,'h'],[3,1,'H'],[4,1,'h']];
+  const HEADS = {
+    ponytail: [[1,-1,'h'],[2,-1,'h']].concat(TOP, FACE),
+    short: [[1,-1,'h'],[2,-1,'H'],[3,-1,'h']].concat(TOP, FACE),
+    long: TOP.concat(FACE),
+    cap: [[1,-1,'x'],[2,-1,'X'],[3,-1,'x'],[0,0,'x'],[1,0,'x'],[2,0,'X'],[3,0,'x'],[4,0,'x'],[0,1,'x'],[1,1,'x'],[2,1,'x'],[3,1,'x'],[4,1,'x'],[5,1,'b'],
+      [0,2,'h'],[1,2,'h'],[2,2,'h'],[3,2,'h'],[4,2,'a'],[0,3,'h'],[1,3,'a'],[2,3,'h'],[3,3,'s'],[4,3,'s'],[0,4,'h'],[1,4,'h'],[2,4,'h'],[3,4,'s'],[4,4,'s']],
+    bob: TOP.concat(FACE.slice(0, 14), [[0,5,'h'],[1,5,'h'],[2,5,'h']])
+  };
+  /* 45° 视角头：6列x5行，脸 2 列宽居中偏右，左侧露出耳/脸颊，头发在两侧包住 */
+  const FACE34 = [[0,2,'h'],[1,2,'h'],[2,2,'h'],[3,2,'s'],[4,2,'s'],
+    [0,3,'h'],[1,3,'a'],[2,3,'h'],[3,3,'s'],[4,3,'s'],
+    [0,4,'h'],[1,4,'a'],[2,4,'h'],[3,4,'s'],[4,4,'s']];
+  const TOP34 = [[0,0,'h'],[1,0,'h'],[2,0,'H'],[3,0,'h'],[4,0,'h'],[5,0,'h'],[0,1,'h'],[1,1,'h'],[2,1,'h'],[3,1,'H'],[4,1,'h'],[5,1,'h']];
+  const HEADS34 = {
+    ponytail: [[1,-1,'h'],[2,-1,'h']].concat(TOP34, FACE34),
+    short: [[1,-1,'h'],[2,-1,'H'],[3,-1,'h']].concat(TOP34, FACE34),
+    long: TOP34.concat(FACE34, []),
+    cap: [[1,-1,'x'],[2,-1,'X'],[3,-1,'x'],[4,-1,'x'],[0,0,'x'],[1,0,'x'],[2,0,'X'],[3,0,'x'],[4,0,'x'],[5,0,'x'],[0,1,'x'],[1,1,'x'],[2,1,'x'],[3,1,'x'],[4,1,'x'],[5,1,'x'],[6,1,'b'],[7,1,'b'],
+      [0,2,'h'],[1,2,'h'],[2,2,'h'],[3,2,'a'],[4,2,'a'],[0,3,'h'],[1,3,'a'],[2,3,'h'],[3,3,'s'],[4,3,'s'],[0,4,'h'],[1,4,'a'],[2,4,'h'],[3,4,'s'],[4,4,'s']],
+    bob: TOP34.concat(FACE34, [[0,5,'h'],[1,5,'h']])
+  };
+  function headKey(look, po) {
+    const c = look.cols;
+    return { h: c.hair, H: c.hairHi || c.hair, s: c.skin, e: po.blink ? c.skin : c.eye, a: c.skinSh || c.skin, x: c.hat, X: c.hatHi || c.hat, b: c.hatBrim || c.hat };
+  }
+  function drawHead(g, look, po, ox, oy) {
+    const map = HEADS[look.hair] || HEADS.ponytail, key = headKey(look, po);
+    for (const m of map) put(g, ox + m[0], oy + m[1], key[m[2]]);
+  }
+  function drawHead34(g, look, po, ox, oy) {
+    const map = HEADS34[look.hair] || HEADS34.ponytail, key = headKey(look, po);
+    for (const m of map) put(g, ox + m[0], oy + m[1], key[m[2]]);
+  }
+  function drawFlask(g, hx, hy, dx, dy, c) {
+    const cx = Math.round(hx + dx * 1.6), cy = Math.round(hy + dy * 1.6 - 0.5);
+    put(g, cx, cy - 2, '#7a5a3a'); put(g, cx, cy - 1, c.glass || '#d6e6ee');
+    put(g, cx - 1, cy, c.glass || '#d6e6ee'); put(g, cx, cy, c.liquid || '#b5523a'); put(g, cx + 1, cy, c.liquid || '#b5523a');
+    put(g, cx - 1, cy + 1, c.liquid || '#b5523a'); put(g, cx, cy + 1, c.liquid2 || '#8e3a28'); put(g, cx + 1, cy + 1, c.liquid2 || '#8e3a28');
+  }
+
+
+  /* ---------- 太空服图层：对任意角色都能穿，所有姿势通用 ---------- */
+  const SU = { SW: '#e3e9f1', SS: '#aab8c9', SD: '#6f7f96', AC: '#ef7b3a', BT: '#39455a', GL: '#7fb4e6', HL: '#d6efff', PK: '#9aa6b8', NZ: '#2d3342' };
+  const HELM7 = ['..XXX..', '.X...X.', 'X.....X', 'X.....X', 'X.....X', 'X.....X', '.X...X.', '..XXX..'];
+  const HELM8 = ['..XXXX..', '.X....X.', 'X......X', 'X......X', 'X......X', 'X......X', '.X....X.', '..XXXX..'];
+  const suitCache = new WeakMap();
+  function suitSpec(spec) {              // 把角色的衣服/袖子/裤子换成太空服配色，头发收进头盔
+    let r = suitCache.get(spec); if (r) return r;
+    const lc = spec.look.cols, h = spec.look.hair;
+    r = Object.assign({}, spec, { look: Object.assign({}, spec.look, { outfit: 'tee', prop: 'none', hair: (h === 'cap' || h === 'long') ? 'short' : h,
+      cols: Object.assign({}, lc, { top: SU.SW, topSh: SU.SS, belt: SU.SD, pelvis: SU.SS, armN: [SU.SW, SU.SW, SU.SD], armF: [SU.SS, SU.SS, SU.SD],
+        legN: [SU.SW, SU.SW, SU.BT, SU.SD], legF: [SU.SS, SU.SS, SU.BT, SU.SD] }) }) });
+    suitCache.set(spec, r); return r;
+  }
+  function drawHelmet(g, x0, y0, rows) {
+    const w = rows[0].length;
+    rows.forEach((row, r) => { for (let c = 0; c < w; c++) {
+      if (row[c] !== 'X') continue;
+      let col = r <= 1 ? SU.SW : r >= 5 ? SU.SS : (c === 0 ? SU.SS : SU.SW);
+      if (r === 7) col = SU.AC; if (c === w - 1 && r >= 2 && r <= 5) col = SU.GL;
+      put(g, x0 + c, y0 + r, col);
+    } });
+    put(g, x0 + 4, y0 + 1, SU.HL); put(g, x0 + w - 1, y0 + 2, SU.HL);
+  }
+  function drawFlame(g, cols, hy, flame) {
+    const len = Math.round(2 + 4 * flame), fc = ['#fff2b8', '#ffc24d', '#ff8a33', '#d4502a', '#8a3322'];
+    for (let r = 0; r < len; r++) for (const x of cols) { if (r >= 2 && Math.random() < 0.3 * r / len) continue; put(g, x, hy - 1 + r, fc[Math.min(4, Math.floor(r * 5 / len))]); }
+  }
+  function drawPack(g, hy, ub, L, flame) {             // 侧面背包：躯干后面两列
+    const sh = y => Math.round(L * (hy - 3 - y) / 4);
+    if (flame > 0) drawFlame(g, [13, 14], hy, flame);
+    for (let y = hy - 6 + ub; y <= hy - 3; y++) { const s = sh(y); put(g, 13 + s, y, SU.PK); put(g, 14 + s, y, SU.SS); }
+    put(g, 13 + sh(hy - 5 + ub), hy - 5 + ub, SU.AC); put(g, 13, hy - 2, SU.NZ); put(g, 14, hy - 2, SU.NZ);
+  }
+
+  /* 画一个完整人物到网格 g（hy 为髋所在行，已含 GOFF）。opts: {suit, flame} */
+  function drawCharacter(g, spec, po, hy, opts) {
+    const suit = !!(opts && opts.suit); if (suit) spec = suitSpec(spec);
+    const b = spec.build, look = spec.look, c = look.cols, o = look.outfit;
+    if (po.v34) return drawChar34(g, spec, po, hy, suit, opts);
+    const L = po.lean || 0, ub = po.bob || 0, hd = po.head || [0, 0], hx = 15, sy = hy - 6 + ub;
+    const LN = legPts(b, po.nl[0], po.nl[1]), LF = legPts(b, po.fl[0], po.fl[1]);
+    const shf = y => Math.round(L * (hy - 3 - y) / 4);
+    const ox = 13 + L + hd[0], oy = hy - 12 + ub + hd[1];
+    drawArm2(g, armPts(b, po.fa[0], po.fa[1]), 15 + L, sy, c.armF, o === 'labcoat' ? -1 : 0);
+    drawLeg2(g, LF, hx, hy, c.legF);
+    if (suit) drawPack(g, hy, ub, L, opts.flame || 0);
+    if (o === 'labcoat') {                           // 白大褂敞开：只有身后的下摆随风飘，前面露出里面的深色衣服
+      const fly = Math.round(clamp(((po.tail ? po.tail[0] : 30) - 10) / 25, 0, 2));
+      for (let y = hy - 2; y <= hy + 4; y++) {
+        const back = y >= hy + 1 ? fly : 0;
+        for (let x = 13 - back + L; x <= 14 + L; x++) put(g, x, y, y === hy + 4 || x < 14 + L ? c.coatSh : c.coat);
+      }
+    }
+    if (look.hair === 'long') {
+      const t0 = po.tail ? po.tail[0] : 30;
+      for (let r = 0; r < 8; r++) {
+        const dx = Math.round(-Math.sin(rad(clamp(t0, -20, 70))) * r * 0.45), x0 = ox - 1 + dx;
+        put(g, x0, oy + 2 + r, c.hair); put(g, x0 + 1, oy + 2 + r, r % 3 === 1 ? c.hairHi : c.hair);
+      }
+    }
+    for (let y = hy - 6 + ub; y <= hy - 3; y++) {
+      const s = shf(y);
+      let bk = c.topSh || c.top, fr = c.top;
+      if (o === 'labcoat') { bk = c.coat; fr = c.top; }
+      else if (o === 'overalls') { bk = c.top; fr = c.bib; }
+      if (y === hy - 6 + ub) {
+        if (o === 'labcoat') { bk = c.coat; fr = c.coat; } else if (o === 'vest') fr = c.collar; else if (o === 'hoodie') { fr = c.hood; bk = c.hood; } else if (o === 'overalls') bk = c.bib;
+      }
+      if (y === hy - 3 && c.belt) { bk = c.belt; fr = c.belt; }
+      put(g, 15 + s, y, bk); put(g, 16 + s, y, fr);
+    }
+    for (let y = hy - 2; y <= hy - 1; y++) { put(g, 15, y, c.pelvis); put(g, 16, y, c.pelvis); }
+    if (hd[1] <= 0) put(g, 16 + L, hy - 7 + ub, c.skinSh || c.skin);
+    if (o === 'hoodie') { put(g, ox, oy + 5, c.hood); put(g, ox + 1, oy + 5, c.hood); put(g, ox, oy + 6, c.hood); }
+    if (suit) put(g, 16 + shf(hy - 5 + ub), hy - 5 + ub, SU.AC);
+    if (look.hair === 'ponytail' && !suit) {
+      const a1 = rad(po.tail[0]), a2 = rad(po.tail[1]);
+      const p0 = [ox + 1, oy], p1 = [p0[0] - 2 * Math.cos(a1), p0[1] + 2 * Math.sin(a1)], p2 = [p1[0] - 2 * Math.cos(a2), p1[1] + 2 * Math.sin(a2)];
+      line(g, p0[0], p0[1], p1[0], p1[1], c.hair, 1); line(g, p1[0], p1[1], p2[0], p2[1], c.hair, 1); put(g, p2[0], p2[1], c.hairEnd || c.hair);
+    }
+    drawHead(g, look, po, ox, oy);
+    if (suit) drawHelmet(g, ox - 1, oy - 2, HELM7);
+    drawLeg2(g, LN, hx, hy, c.legN);
+    const AN = armPts(b, po.na[0], po.na[1]);
+    if (look.prop === 'flask') {
+      const hxp = 16 + L + AN.wx, hyp = sy + AN.wy, f = rad(po.na[1]);
+      drawFlask(g, hxp, hyp, Math.sin(f), Math.cos(f), c);
+    }
+    drawArm2(g, AN, 16 + L, sy, c.armN, o === 'labcoat' ? 1 : 0);
+  }
+
+  /* ---------- 45° 视角（待机用）----------
+   * 身体微转向观众：肩 4 宽、躯干 2 宽、双臂分在两侧、两条腿并排；头 6 列，脸 2 列宽、露出一侧耳朵。
+   * 姿势字段：na/fa = 画面左/右臂 [上臂角,前臂角]；nl/fl = 画面左/右腿；角度在画面平面内，向下为0，向画面右为正。 */
+  function drawLeg34(g, L, hx, hy, cols, side) {
+    line(g, hx, hy, hx + L.kx, hy + L.ky, cols[0], 2);
+    line(g, hx + L.kx, hy + L.ky, hx + L.ax, hy + L.ay, cols[1], 2);
+    const ax = Math.round(hx + L.ax), ay = Math.round(hy + L.ay);
+    if (cols[3]) { put(g, ax, ay - 1, cols[3]); put(g, ax + 1, ay - 1, cols[3]); }
+    for (let i = 0; i < 3; i++) put(g, (side < 0 ? ax - 1 : ax) + i, ay, cols[2]);
+  }
+  function drawChar34(g, spec, po, hy, suit, opts) {
+    const b = spec.build, look = spec.look, c = look.cols, o = look.outfit;
+    const ub = po.bob || 0, hd = po.head || [0, 0], ox = 12 + hd[0], oy = hy - 12 + ub + hd[1], sy = hy - 6 + ub;
+    const LA = armPts(b, po.na[0], po.na[1]), RA = armPts(b, po.fa[0], po.fa[1]);
+    const LL = legPts(b, po.nl[0], po.nl[1]), RL = legPts(b, po.fl[0], po.fl[1]);
+    const t0 = po.tail ? po.tail[0] : 30;
+    // 后层：右臂(远)、实验服下摆、长发
+    const sl = o === 'labcoat';
+    drawArm2(g, RA, 17, sy, c.armF, sl ? 1 : 0);
+    if (look.hair === 'long') {
+      for (let r = 0; r < 8; r++) {
+        const dx = Math.round(-Math.sin(rad(clamp(t0 - 20, -10, 40))) * r * 0.35), x0 = ox + dx;
+        put(g, x0, oy + 2 + r, c.hair); put(g, x0 + 1, oy + 2 + r, r % 3 === 1 ? c.hairHi : c.hair);
+      }
+    }
+    if (suit) {                                     // 背包在躯干后面，喷口在腰后
+      if (opts.flame > 0) drawFlame(g, [12, 13], hy, opts.flame);
+      for (let y = hy - 6 + ub; y <= hy - 3; y++) { put(g, 12, y, SU.PK); put(g, 13, y, SU.SS); put(g, 14, y, SU.SS); }
+      put(g, 12, hy - 5 + ub, SU.AC); put(g, 13, hy - 2, SU.NZ); put(g, 14, hy - 2, SU.NZ);
+    }
+    drawLeg34(g, RL, 16, hy, c.legF, 1);
+    drawLeg34(g, LL, 14, hy, c.legN, -1);
+    // 躯干
+    for (let y = hy - 6 + ub; y <= hy - 3; y++) {
+      let bk = c.topSh || c.top, fr = c.top;
+      if (o === 'overalls') { bk = c.top; fr = c.bib; }
+      const top = y === hy - 6 + ub;
+      if (o === 'labcoat') {
+        bk = c.top; fr = c.top; if (y === hy - 3 && c.belt) { bk = c.belt; fr = c.belt; }
+        put(g, 14, y, top ? c.coat : c.coatSh); put(g, 17, y, c.coat); put(g, 15, y, top ? c.coat : bk); put(g, 16, y, top ? c.top : fr);   // 翻领：领口一侧是白的
+        continue;
+      }
+      if (top) { if (o === 'vest') fr = c.collar; else if (o === 'hoodie') { fr = c.hood; bk = c.hood; } else if (o === 'overalls') bk = c.bib; }
+      if (y === hy - 3 && c.belt) { bk = c.belt; fr = c.belt; }
+      if (top) { put(g, 14, y, bk); put(g, 15, y, fr); put(g, 16, y, fr); put(g, 17, y, bk); }
+      else { put(g, 15, y, bk); put(g, 16, y, fr); }
+    }
+    if (o === 'labcoat') {                           // 白大褂半穿、没扣扣子：中间露出里面的深色衣服和裤子，白色只在两侧垂下
+      const sway = Math.round(clamp((t0 - 20) / 30, 0, 1));
+      for (let y = hy - 2; y <= hy - 1; y++) { put(g, 15, y, c.pelvis); put(g, 16, y, c.pelvis); }
+      for (let y = hy - 2; y <= hy + 5; y++) {
+        const k = y - (hy - 2), wl = k >= 4 ? 2 : 1;                  // 越往下越外翻
+        put(g, 14, y, c.coatSh); if (wl > 1) put(g, 13, y, c.coatSh);
+        put(g, 17, y, c.coat); if (wl > 1) put(g, 18, y, c.coat);
+        if (y === hy + 5) { put(g, 12 - sway, y, c.coatSh); put(g, 19 + sway, y, c.coat); }
+      }
+    } else for (let y = hy - 2; y <= hy - 1; y++) { put(g, 15, y, c.pelvis); put(g, 16, y, c.pelvis); }
+    if (hd[1] <= 0) { put(g, 15, hy - 7 + ub, c.skinSh || c.skin); if (o === 'hoodie') { put(g, 14, hy - 7 + ub, c.hood); put(g, 16, hy - 7 + ub, c.hood); } }
+    if (suit) put(g, 16, hy - 4 + ub, SU.AC);
+    if (look.hair === 'ponytail' && !suit) {      // 发尾挂在脑后左侧，几乎垂直下落
+      const a1 = rad(po.tail[0]), a2 = rad(po.tail[1]);
+      const p0 = [ox, oy + 1], p1 = [p0[0] - 2 * Math.cos(a1), p0[1] + 2 * Math.sin(a1)], p2 = [p1[0] - 2 * Math.cos(a2), p1[1] + 2 * Math.sin(a2)];
+      line(g, p0[0], p0[1], p1[0], p1[1], c.hair, 1); line(g, p1[0], p1[1], p2[0], p2[1], c.hair, 1); put(g, p2[0], p2[1], c.hairEnd || c.hair);
+    }
+    drawHead34(g, look, po, ox, oy);
+    if (suit) drawHelmet(g, ox - 1, oy - 2, HELM8);
+    if (o === 'hoodie') { put(g, ox + 1, oy + 5, c.hood); put(g, ox + 4, oy + 5, c.hood); }
+    // 前层：左臂(近)，可能拿烧瓶
+    if (look.prop === 'flask') { const f = rad(po.na[1]); drawFlask(g, 14 + LA.wx, sy + LA.wy, Math.sin(f), Math.cos(f), c); }
+    drawArm2(g, LA, 14, sy, c.armN, sl ? -1 : 0);
+  }
+  function charGrid(spec, po, hy, phi, opts) {
+    const g = mkG(); drawCharacter(g, spec, po, hy + GOFF, opts);
+    if (!phi) return g;
+    const o = mkG(), cc = Math.cos(rad(phi)), ss = Math.sin(rad(phi)), cx = 16, cy = hy + GOFF - 3;
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cy, sx = Math.floor(cx + dx * cc + dy * ss), sy = Math.floor(cy - dx * ss + dy * cc);
+      if (sx >= 0 && sy >= 0 && sx < GW && sy < GH && g[sy][sx]) o[y][x] = g[sy][sx];
+    }
+    return o;
+  }
+
+  /* ---------- 姿势库 ---------- */
+  const norm = po => Object.assign({ head: [0, 0], lean: 0, bob: 0, tail: [28, 58] }, po);
+  const mixArr = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  function blend(a, b, t) {
+    a = norm(a); b = norm(b);
+    const o = {};
+    for (const k of ['nl', 'fl', 'na', 'fa', 'tail', 'head']) o[k] = mixArr(a[k], b[k], t);
+    o.lean = Math.round(a.lean + (b.lean - a.lean) * t); o.bob = Math.round(a.bob + (b.bob - a.bob) * t);
+    o.blink = b.blink; return o;
+  }
+  function walkBase(i, sw) {
+    const p = i / 8 * Math.PI * 2, q = p + Math.PI, nth = 30 * Math.sin(p), fth = 30 * Math.sin(q);
+    const nb = 8 + 50 * Math.max(0, Math.cos(p)), fb = 8 + 50 * Math.max(0, Math.cos(q));
+    const nu = -30 * Math.sin(p) * sw, fu = -30 * Math.sin(q) * sw;
+    return norm({ nl: [nth, nth - nb], fl: [fth, fth - fb], na: [nu, nu + (22 + 14 * Math.max(0, -Math.sin(p))) * sw], fa: [fu, fu + (22 + 14 * Math.max(0, -Math.sin(q))) * sw],
+      tail: [28 + 14 * Math.sin(p - 0.5), 58 + 14 * Math.sin(p - 0.5) + 14 * Math.sin(p - 1.5)] });
+  }
+  const RL = [[30, 22], [32, -55], [-5, -12], [-30, -40], [-25, -95], [5, -100], [40, -60], [55, 10]];
+  function runBase(i) {
+    const sn = Math.sin(2 * Math.PI * (i - 1.5) / 8), sf = Math.sin(2 * Math.PI * (i + 4 - 1.5 - 0.4) / 8);
+    const un = 5 + 50 * sn, uf = 5 + 46 * sf, p = i / 8 * Math.PI * 2, fl = (i === 3 || i === 7) ? 6 : 0, a1 = 8 + 10 * Math.sin(p - 0.5) - fl;
+    return norm({ nl: RL[i], fl: RL[(i + 4) % 8], na: [un, un + 70 + 25 * sn], fa: [uf, uf + 68 + 22 * sf], tail: [a1, a1 + 14 + 10 * Math.sin(p - 1.5)], lean: 1 });
+  }
+  const ARM = { cross: [[30, -85], [30, -85]], chin: [[58, 172], [25, -80]], hips: [[30, -70], [30, -70]], hug: [[10, -100], [10, -100]], flask: [[82, 128], null] };
+  const P = {
+    skid: { nl: [38, 28], fl: [-18, -40], na: [70, 110], fa: [-60, -100], tail: [50, 75], lean: -1 },
+    crouch: { nl: [42, -40], fl: [36, -44], na: [-50, -20], fa: [-25, -5], tail: [35, 62] },
+    spring: { nl: [22, -28], fl: [18, -30], na: [28, 55], fa: [8, 35], tail: [40, 65] },
+    land: { nl: [55, -50], fl: [48, -55], na: [30, 75], fa: [10, 40], tail: [50, 75] },
+    tuck: { nl: [95, -30], fl: [100, -35], na: [45, 85], fa: [20, 60], tail: [30, 55] }
+  };
+  const SLEG = [[36, 26], [30, -62], [-28, -22], [-45, -80], [-20, -110], [30, -75], [70, -20], [62, 15]];
+  function sprintBase(i) {                         // 冲刺：身体更前倾，摆臂和步幅更大
+    const sn_ = Math.sin(2 * Math.PI * (i - 1.5) / 8), sf = Math.sin(2 * Math.PI * (i + 4 - 1.5 - 0.4) / 8);
+    const un = 65 * sn_, uf = 60 * sf, p = i / 8 * Math.PI * 2, fl = (i === 3 || i === 7) ? 5 : 0, a1 = 3 + 6 * Math.sin(p - 0.5) - fl;
+    return norm({ nl: SLEG[i], fl: SLEG[(i + 4) % 8], na: [un, un + 80 + 20 * sn_], fa: [uf, uf + 78 + 18 * sf], tail: [a1, a1 + 8 + 8 * Math.sin(p - 1.5)], lean: 2 });
+  }
+  function crouchWalkBase(i) {                     // 蹲行
+    const p = i / 8 * Math.PI * 2, q = p + Math.PI, f = a => { const th = 60 + 16 * Math.sin(a), bend = 70 + 24 * Math.max(0, Math.cos(a)); return [th, th - bend]; }, s_ = Math.sin(p);
+    return norm({ nl: f(p), fl: f(q), na: [30 - 10 * s_, 62 - 10 * s_], fa: [24 + 10 * s_, 52 + 8 * s_], tail: [42 + 6 * Math.sin(p - 0.5), 68 + 8 * Math.sin(p - 1)], lean: 2 });
+  }
+  const PX = {
+    crouchIdle: { nl: [70, -70], fl: [64, -72], na: [34, 64], fa: [20, 52], tail: [44, 70], lean: 2 },
+    blinkWind: { nl: [58, -62], fl: [40, -72], na: [-75, -35], fa: [-55, -10], tail: [10, 25], lean: 2 },
+    blinkLand: { nl: [52, 16], fl: [-48, -58], na: [-62, -20], fa: [52, 95], tail: [5, 15], lean: 2 }
+  };
+  const KICK = [   // 太空服二段跳：原地蹬腿（一条腿折叠、一条伸直）+ 背包喷气
+    [0, { nl: [82, -72], fl: [72, -66], na: [60, 100], fa: [-40, -80], tail: [35, 60] }],
+    [0.1, { nl: [86, -78], fl: [-4, -10], na: [110, 150], fa: [-60, -120], tail: [12, 32] }],
+    [0.2, { nl: [70, -52], fl: [-12, -22], na: [125, 160], fa: [-55, -120], tail: [-8, 12] }],
+    [0.3, { nl: [30, -30], fl: [65, 5], na: [75, 120], fa: [-50, -85], tail: [10, 32] }]];
+  function kickPose(t) {
+    t = Math.floor(t / 0.05) * 0.05;
+    for (let i = 0; i < KICK.length - 1; i++) if (t <= KICK[i + 1][0]) return blend(KICK[i][1], KICK[i + 1][1], (t - KICK[i][0]) / (KICK[i + 1][0] - KICK[i][0]));
+    return norm(KICK[KICK.length - 1][1]);
+  }
+  const AK = [
+    [2.5, { nl: [-8, -12], fl: [-4, -8], na: [135, 170], fa: [60, 100], tail: [55, 80] }],
+    [1.6, { nl: [-15, -35], fl: [50, 5], na: [110, 160], fa: [-35, -95], tail: [45, 70] }],
+    [0.8, { nl: [5, -45], fl: [60, 15], na: [95, 140], fa: [-55, -100], tail: [30, 55] }],
+    [0.0, { nl: [30, -30], fl: [65, 5], na: [75, 120], fa: [-50, -85], tail: [10, 32] }],
+    [-0.8, { nl: [20, -15], fl: [45, 5], na: [100, 150], fa: [-70, -140], tail: [-10, 10] }],
+    [-1.6, { nl: [5, -8], fl: [15, 0], na: [125, 160], fa: [-55, -120], tail: [-30, -8] }],
+    [-2.6, { nl: [12, 0], fl: [-10, -10], na: [60, 100], fa: [-35, -70], tail: [-20, 0] }]
+  ];
+  function airPose(v) {
+    if (v >= AK[0][0]) return norm(AK[0][1]);
+    for (let i = 0; i < AK.length - 1; i++) if (v <= AK[i][0] && v > AK[i + 1][0]) return blend(AK[i][1], AK[i + 1][1], (AK[i][0] - v) / (AK[i][0] - AK[i + 1][0]));
+    return norm(AK[AK.length - 1][1]);
+  }
+
+  /* ---------- 性格专属待机骨架动作 ---------- */
+  const ph = (t, c) => ((t % c) + c) % c;
+  const IDLES = {
+    // 冷静：抱臂，慢呼吸，偶尔换重心
+    cross(t, talk) {
+      const u = ph(t, 3.2) / 3.2, bob = u < 0.38 ? 0 : u < 0.72 ? -1 : 0, sh = ph(t, 7.5);
+      const shift = sh > 5.8 && sh < 6.7;
+      return norm({ nl: shift ? [10, 5] : [3, 0], fl: shift ? [-8, -7] : [-3, -2], na: ARM.cross[0], fa: ARM.cross[1], tail: [26 + 3 * Math.sin(t * 1.6), 52 + 4 * Math.sin(t * 1.9)], bob, head: [0, talk && Math.sin(t * 7) > 0.6 ? 1 : 0] });
+    },
+    // 沉思：手托下巴，低头，指尖轻敲
+    think(t, talk) {
+      const u = ph(t, 3.8) / 3.8, bob = u < 0.4 ? 0 : u < 0.75 ? -1 : 0, look = ph(t, 9) < 4 ? 1 : 0, tap = ph(t, 2.6) > 2.25 ? 1 : 0;
+      return norm({ nl: [6, 0], fl: [-5, -4], na: [58 + (tap ? 8 : 0), 172 - (tap ? 10 : 0)], fa: ARM.chin[1], tail: [30, 55], lean: look, bob, head: [0, talk ? (Math.sin(t * 5) > 0 ? 1 : 0) : look] });
+    },
+    // 健谈：举着瓶子比划，脚尖弹跳，点头
+    talk(t) {
+      const s = Math.sin(t * 3.2), bob = Math.sin(t * 6.5) > 0.4 ? -1 : 0;
+      return norm({ nl: [3 + (bob ? 0 : 6), bob ? 0 : -8], fl: [-3, -2 - (bob ? 0 : 6)], na: [98 + 18 * s, 142 + 22 * Math.sin(t * 3.2 + 0.8)],
+        fa: [45 + 30 * Math.sin(t * 2.4 + 1), 85 + 25 * Math.sin(t * 2.4 + 1.6)], tail: [20 + 10 * Math.sin(t * 3), 45 + 12 * Math.sin(t * 3 + 1)], bob, head: [0, Math.sin(t * 3.2) > 0.7 ? 1 : 0] });
+    },
+    // 暴躁：叉腰，分腿站，跺脚，叹气
+    hips(t, talk) {
+      const st = ph(t, 3.4), stomp = st > 2.9 && st < 3.15, sg = ph(t, 6.5), sigh = sg > 5.2 && sg < 6.0;
+      const na = talk ? [85 + 15 * Math.sin(t * 4), 120] : ARM.hips[0];
+      return norm({ nl: stomp ? [34, -34] : [12, 6], fl: [-12, -10], na, fa: ARM.hips[1], tail: [25, 50], bob: sigh ? 1 : 0, head: [0, sigh ? 1 : 0] });
+    },
+    // 胆小：抱住自己，缩肩，脚尖点地，偶尔偷看
+    hug(t, talk) {
+      const gl = ph(t, 8), glance = gl > 6.6 && gl < 7.3, tp = Math.sin(t * 5) > 0.6 && ph(t, 6) < 2;
+      return norm({ nl: [2, 0], fl: tp ? [8, -2] : [0, 0], na: ARM.hug[0], fa: ARM.hug[1], tail: [32, 60], lean: glance ? 0 : 1, bob: glance ? 0 : (talk && Math.sin(t * 9) > 0 ? 0 : 1), head: [0, glance ? 0 : 1] });
+    }
+  };
+
+  /* ---------- 45° 待机（性格专属骨架动作，主用）---------- */
+  const n34 = o => Object.assign({ v34: true, head: [0, 0], bob: 0, lean: 0, tail: [72, 86] }, o);
+  const sn = Math.sin;
+  const IDLES34 = {
+    // 冷静：双臂在胸前交叉，慢呼吸，偶尔换重心
+    cross(t, talk) {
+      const u = ph(t, 3.2) / 3.2, bob = u < 0.38 ? 0 : u < 0.72 ? -1 : 0, sh = ph(t, 7.5), shift = sh > 5.8 && sh < 6.7;
+      return n34({ nl: shift ? [-12, -9] : [-4, -2], fl: shift ? [4, 2] : [3, 2], na: [-6, 98], fa: [6, -98],
+        tail: [72 + 4 * sn(t * 1.6), 86 + 5 * sn(t * 1.9)], bob, head: [0, talk && sn(t * 7) > 0.6 ? 1 : 0] });
+    },
+    // 沉思：一只手托下巴、另一只手托住手肘，低头，指尖轻敲
+    think(t, talk) {
+      const u = ph(t, 3.8) / 3.8, bob = u < 0.4 ? 0 : u < 0.75 ? -1 : 0, look = ph(t, 9) < 4 ? 1 : 0, tap = ph(t, 2.6) > 2.25 ? 1 : 0;
+      return n34({ nl: [-3, -2], fl: [4, 3], na: [-5, 92], fa: [50, tap ? 222 : 230], tail: [72, 86], bob, head: [0, talk ? (sn(t * 5) > 0 ? 1 : 0) : look] });
+    },
+    // 健谈：举着烧瓶比划，另一只手跟着摆，脚尖弹跳，点头
+    talk(t) {
+      const s = sn(t * 3.2), up = sn(t * 6.5) > 0.4;                    // 脚尖弹跳只动腿，不抬躯干，避免身体变长、腿显短
+      return n34({ nl: [-4 + (up ? 0 : -6), -2 + (up ? 0 : 6)], fl: [4, 3 - (up ? 0 : 4)], na: [-70 + 15 * s, -165 + 20 * sn(t * 3.2 + 0.8)],
+        fa: [55 + 22 * sn(t * 2.4 + 1), 100 + 25 * sn(t * 2.4 + 1.6)], tail: [20 + 8 * sn(t * 3), 40 + 10 * sn(t * 3 + 1)], bob: 0, head: [0, sn(t * 3.2) > 0.7 ? 1 : 0] });
+    },
+    // 暴躁：双手叉腰，分腿站，跺脚，叹气
+    hips(t, talk) {
+      const st = ph(t, 3.4), stomp = st > 2.9 && st < 3.15, sg = ph(t, 6.5), sigh = sg > 5.2 && sg < 6.0;
+      const na = talk ? [-78 + 12 * sn(t * 4), -105] : [-48, 52];
+      return n34({ nl: [-14, -10], fl: stomp ? [26, -26] : [14, 10], na, fa: [48, -52], tail: [30, 50], bob: sigh ? 1 : 0, head: [0, sigh ? 1 : 0] });
+    },
+    // 自在：双臂自然下垂，上身慢呼吸，偶尔换脚、偶尔环顾（没有性格倾向的基础待机）
+    free(t, talk) {
+      const u = ph(t, 3.4) / 3.4, bob = u < 0.35 ? 0 : u < 0.7 ? -1 : 0, sh = ph(t, 8.5), shift = sh > 6.4 && sh < 7.4, gl = ph(t, 11), look = gl > 8.6 && gl < 9.8;
+      const sw = sn(t * 1.3), ba = ph(t - 0.25, 3.4) / 3.4 > 0.35 && ph(t - 0.25, 3.4) / 3.4 < 0.7 ? 1 : 0;
+      return n34({ nl: shift ? [-9, -5] : [-4, -2], fl: shift ? [2, 1] : [3, 2], na: [-9 - 2 * ba + sw, -4 - 3 * ba], fa: [9 + 2 * ba - sw, 4 + 3 * ba],
+        tail: [72 + 4 * sn(t * 1.5), 86 + 5 * sn(t * 1.8)], bob, head: [look ? 1 : 0, talk && sn(t * 7) > 0.6 ? 1 : 0] });
+    },
+    // 胆小：双臂抱住自己，缩肩，膝盖内扣，脚尖点地，偶尔偷看
+    hug(t, talk) {
+      const gl = ph(t, 8), glance = gl > 6.6 && gl < 7.3, tp = sn(t * 5) > 0.6 && ph(t, 6) < 2;
+      return n34({ nl: [5, -2], fl: tp ? [-8, 2] : [-3, 3], na: [-14, 112], fa: [14, -112], tail: [72, 86], bob: glance ? 0 : (talk && sn(t * 9) > 0 ? 0 : 1), head: [glance ? 1 : 0, glance ? 0 : 1] });
+    }
+  };
+
+  function poser(spec) {
+    const b = spec.build, g = spec.gait || {};
+    const sw = g.swing == null ? 1 : g.swing;
+    return {
+      hyGround: po => gHy(b, norm(po)),
+      idle: (t, talk) => (spec.idleView === 'side' ? IDLES : IDLES34)[spec.idle](t, talk),
+      stand: () => norm({ nl: [3, 0], fl: [-3, -2], na: [6, 14], fa: [-6, -4], tail: [26, 52] }),
+      loco(mode, i) {
+        if (mode === 'sprint') return sprintBase(i);
+        if (mode === 'cwalk') return crouchWalkBase(i);
+        if (mode === 'run') { const po = runBase(i); po.lean += g.lean ? 1 : 0; return po; }
+        const po = walkBase(i, sw), m = g.walkArms;
+        if (m === 'pocket') { po.na = [po.na[0] * 0.5, po.na[0] * 0.5 + 10]; po.fa = [po.fa[0] * 0.5, po.fa[0] * 0.5 + 10]; }
+        else if (ARM[m]) { po.na = ARM[m][0]; if (ARM[m][1]) po.fa = ARM[m][1]; }
+        po.lean += g.lean || 0;
+        if (g.stomp && (i === 0 || i === 4)) po.bob = 1;
+        return po;
+      },
+      runBob: i => i === 3 || i === 7,
+      crouchIdle: () => norm(PX.crouchIdle), blinkWind: () => norm(PX.blinkWind), blinkLand: () => norm(PX.blinkLand), kick: t => kickPose(t),
+      skid: () => norm(P.skid),
+      pre: t => norm(t < 0.07 ? P.crouch : P.spring),
+      land: t => norm(t < 0.07 ? P.land : P.crouch),
+      air: v => airPose(v),
+      flip: ft => ({ po: norm(P.tuck), phi: Math.floor(ft / 0.2 * 6) / 6 * 360 })
+    };
+  }
+
+  return { GW, GH, GOFF, FOOT, SHY, SKELETON, HEADS, IDLES, IDLES34, SUIT: SU, drawCharacter, charGrid, poser, blend, norm, gHy, rad, clamp };
+});
+</script>
+<script>/* 角色规格：外观、性格参数、待机骨架动作类型、步态、台词。新增角色只需要往 CAST 里加一项。 */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PixelCast = factory();
+})(typeof globalThis !== 'undefined' ? globalThis : (typeof self !== 'undefined' ? self : this), function () {
+  'use strict';
+  const build = { thigh: 6, shin: 5, upper: 3, fore: 3 };
+  const CAST = [
+    {
+      id: 'lin', name: '林', tag: '冷静', desc: '抱着手臂旁观一切的守望者', idle: 'cross', idleName: '抱臂、慢呼吸、偶尔换重心',
+      traits: { soc: 0.2, en: 0.3, cau: 0.5, cur: 0.3, pat: 0.9 },
+      gait: { walkArms: 'pocket', swing: 0.6, lean: 0 }, build,
+      look: { hair: 'ponytail', outfit: 'tee', prop: 'none', cols: {
+        skin: '#f3c9a5', skinSh: '#d9a987', eye: '#2a1f1f', hair: '#141414', hairHi: '#2c2c2c', hairEnd: '#0c0c0c',
+        top: '#26282c', topSh: '#1b1d20', belt: '#3a3c42', pelvis: '#3b3b3b',
+        armN: ['#f3c9a5', '#f3c9a5', '#f3c9a5'], armF: ['#b98b6c', '#b98b6c', '#b98b6c'],
+        legN: ['#3b3b3b', '#ffffff', '#2a2a2a'], legF: ['#232220', '#232220', '#a9a9bd'] } },
+      lines: {
+        greet: ['……', '嗯。', '有事？'], chat: ['风向变了。', '别靠太近。', '无聊。', '走吧。', '随便。'],
+        react: ['别碰我。', '嗯？', '……'], refuse: ['没兴趣。'], flee: ['离远点。']
+      }
+    },
+    {
+      id: 'bai', name: '白', tag: '沉思', desc: '总在琢磨什么的白发学者', idle: 'think', idleName: '手托下巴、低头、指尖轻敲',
+      traits: { soc: 0.4, en: 0.2, cau: 0.6, cur: 0.8, pat: 0.8 },
+      gait: { walkArms: 'chin', swing: 0.5, lean: 1 }, build,
+      look: { hair: 'short', outfit: 'vest', prop: 'none', cols: {
+        skin: '#f1d3bd', skinSh: '#d2b49c', eye: '#3a2a30', hair: '#ecedf1', hairHi: '#ffffff',
+        top: '#4b2f46', topSh: '#3a2437', collar: '#f2f2f4', belt: '#2b1e2c', pelvis: '#33263a',
+        armN: ['#f2f2f4', '#f2f2f4', '#f1d3bd'], armF: ['#c9c9d0', '#c9c9d0', '#d2b49c'],
+        legN: ['#3e2c42', '#3e2c42', '#16121a'], legF: ['#2c2030', '#2c2030', '#0f0c12'] } },
+      lines: {
+        greet: ['嗯……', '你来得正好。', '我在想一件事。'], chat: ['这说不通。', '再想想。', '也许可以这样。', '有意思……', '我得记下来。'],
+        react: ['嗯？', '等一下，我在想。', '有发现吗？'], refuse: ['抱歉，我走神了。'], flee: ['呃……']
+      }
+    },
+    {
+      id: 'su', name: '苏', tag: '健谈', desc: '举着烧瓶说个不停的研究员', idle: 'talk', idleName: '举瓶比划、脚尖弹跳、点头',
+      traits: { soc: 0.95, en: 0.85, cau: 0.2, cur: 0.7, pat: 0.3 },
+      gait: { walkArms: 'flask', swing: 1.2, lean: 0 }, build,
+      look: { hair: 'long', outfit: 'labcoat', prop: 'flask', cols: {
+        skin: '#e7b896', skinSh: '#c79a7a', eye: '#2a1a18', hair: '#3a2420', hairHi: '#5a3a30',
+        top: '#243a42', coat: '#eef2f4', coatSh: '#c2cbd2', belt: '#222a2e', pelvis: '#1d1f24',
+        armN: ['#eef2f4', '#eef2f4', '#e7b896'], armF: ['#c2cbd2', '#c2cbd2', '#c79a7a'],
+        legN: ['#1d1f24', '#1d1f24', '#111114'], legF: ['#15171b', '#15171b', '#0c0c0e'],
+        glass: '#d6e6ee', liquid: '#c4573a', liquid2: '#8e3a28' } },
+      lines: {
+        greet: ['嗨！', '快来看这个！', '你们听我说！'], chat: ['我的实验成功了！', '来来来，尝尝？', '太神奇了！', '哎呀，洒了！', '再来一次！'],
+        react: ['哇！', '你要看我的瓶子吗？', '正好找你！'], refuse: ['那下次再说！'], flee: ['别跑呀！']
+      }
+    },
+    {
+      id: 'tie', name: '铁', tag: '暴躁', desc: '戴黄帽子的脾气硬工匠', idle: 'hips', idleName: '叉腰、跺脚、叹气',
+      traits: { soc: 0.3, en: 0.5, cau: 0.4, cur: 0.2, pat: 0.5 },
+      gait: { walkArms: 'swing', swing: 1.0, lean: 0, stomp: true }, build,
+      look: { hair: 'cap', outfit: 'overalls', prop: 'none', cols: {
+        skin: '#c98f66', skinSh: '#a8734f', eye: '#241a14', hair: '#3a2a20', hat: '#e09a2e', hatHi: '#f1b650', hatBrim: '#b87a1f',
+        top: '#6a6a4a', bib: '#8a8f58', belt: '#4a3a28', pelvis: '#5a5c3c',
+        armN: ['#6a6a4a', '#c98f66', '#c98f66'], armF: ['#505038', '#a8734f', '#a8734f'],
+        legN: ['#5c5e3e', '#5c5e3e', '#2a2a2a'], legF: ['#46482f', '#46482f', '#1c1c1c'] } },
+      lines: {
+        greet: ['哼。', '什么事？', '又是你。'], chat: ['活儿还没干完。', '谁碰了我的扳手？', '别挡路。', '又得加班。', '凑合能用。'],
+        react: ['别吵！', '干嘛？', '哼！'], refuse: ['没空。'], flee: ['别挡我的路！']
+      }
+    },
+    {
+      id: 'mi', name: '米', tag: '胆小', desc: '裹在连帽衫里的怕生少女', idle: 'hug', idleName: '抱住自己、缩肩、偷看',
+      traits: { soc: 0.15, en: 0.45, cau: 0.95, cur: 0.4, pat: 0.6 },
+      gait: { walkArms: 'hug', swing: 0.4, lean: 1 }, build: { thigh: 5, shin: 5, upper: 3, fore: 3 },
+      look: { hair: 'bob', outfit: 'hoodie', prop: 'none', cols: {
+        skin: '#f0cfb4', skinSh: '#d3af93', eye: '#2d2220', hair: '#9a4f34', hairHi: '#b9684a',
+        top: '#4d7a82', topSh: '#3d6068', hood: '#3d6068', belt: '#3d6068', pelvis: '#2e3a44',
+        armN: ['#4d7a82', '#4d7a82', '#f0cfb4'], armF: ['#3d6068', '#3d6068', '#d3af93'],
+        legN: ['#2e3a44', '#2e3a44', '#8a8f99'], legF: ['#222c35', '#222c35', '#6e737d'] } },
+      lines: {
+        greet: ['呃……', '那、那个……', '对、对不起。'], chat: ['我、我先走了……', '别、别看我。', '好可怕。', '嗯、嗯。', '我不太会说话……'],
+        react: ['呀！', '别、别过来！', '对不起！'], refuse: ['我、我还有事……'], flee: ['呜……']
+      }
+    },
+    {
+      id: 'xing', name: '星', tag: '探索者', desc: '最初那位主角：冲刺、瞬移、蹲行都会，还能穿太空服', idle: 'free', idleName: '自然站立、上身呼吸、偶尔环顾',
+      traits: { soc: 0.55, en: 0.8, cau: 0.35, cur: 0.9, pat: 0.3 },
+      abilities: { sprint: true, blink: true, sneak: true },
+      gait: { walkArms: 'normal', swing: 1.0, lean: 0 }, build,
+      look: { hair: 'ponytail', outfit: 'tee', prop: 'none', cols: {
+        skin: '#f5c9a6', skinSh: '#b98b6c', eye: '#1b1b1b', hair: '#1b1b1b', hairHi: '#2c2c2c', hairEnd: '#232220',
+        top: '#1b1b1b', topSh: '#1b1b1b', belt: '#1b1b1b', pelvis: '#3b3b3b',
+        armN: ['#1b1b1b', '#f5c9a6', '#f5c9a6'], armF: ['#232220', '#b98b6c', '#b98b6c'],
+        legN: ['#3b3b3b', '#ffffff', '#2a2a2a'], legF: ['#232220', '#232220', '#a9a9bd'] } },
+      lines: {
+        greet: ['嗨！', '前面有什么？', '一起去看看？'], chat: ['那边好像有光。', '我想去试试！', '这里没来过。', '跑起来吧！', '要不要瞬移过去？'],
+        react: ['嗯？', '等等我！', '怎么了？'], refuse: ['下次吧！'], flee: ['先撤！']
+      }
+    }
+  ];
+  const AFFINITY = {
+    lin: { bai: 0.3, su: 0.1, tie: 0.0, mi: 0.2, xing: 0.3 }, bai: { lin: 0.3, su: 0.6, tie: 0.1, mi: 0.4, xing: 0.5 },
+    su: { lin: 0.4, bai: 0.8, tie: 0.2, mi: 0.5, xing: 0.6 }, tie: { lin: 0.2, bai: 0.1, su: -0.2, mi: -0.3, xing: 0.1 }, mi: { lin: 0.3, bai: 0.5, su: -0.1, tie: -0.6, xing: 0.4 },
+    xing: { lin: 0.3, bai: 0.4, su: 0.6, tie: 0.1, mi: 0.3 }
+  };
+  return { CAST, AFFINITY };
+});
+</script>
+<script>/* PixelAI：世界、物理与角色自主行为（无 DOM，浏览器和 Node 都能用）
+ * 分三层：
+ *   1) 意图层 goal   —— 由性格 traits 决定：发呆 / 闲逛 / 看东西 / 找人聊天 / 躲开 / 蹲下
+ *   2) 操控层 want   —— 意图层每帧输出：{dir, run, jump, jump2, crouch}，玩家接管时由键盘写入同一份 want
+ *   3) 运动层 loc    —— 物理 + 状态：idle walk run skid pre air flip land crouch
+ * framePose(a) 把状态翻译成骨架姿势，交给 PixelRig 绘制。 */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./rig.js'), require('./cast.js'));
+  else root.PixelAI = factory(root.PixelRig, root.PixelCast);
+})(typeof globalThis !== 'undefined' ? globalThis : (typeof self !== 'undefined' ? self : this), function (Rig, Cast) {
+  'use strict';
+  const WW = 1200, BASE = 150, STEP = 4, G = 520, JV = 175, DJV = 140;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+  /* ---------- 地形：一条横向地面，带台阶、浅沟、宽沟、矮墙 ---------- */
+  function buildTerrain() {
+    const H = new Array(WW).fill(BASE);
+    const set = (x0, x1, y) => { for (let x = x0; x < x1; x++) H[x] = y; };
+    set(0, 10, BASE - 70); set(WW - 10, WW, BASE - 70);        // 世界边界墙
+    set(150, 166, BASE + 10);                                  // 窄沟 16px：走着跳就能过
+    set(400, 410, BASE - 4); set(410, 420, BASE - 8); set(420, 470, BASE - 12); // 台阶 + 平台
+    set(470, 480, BASE - 8); set(480, 490, BASE - 4);
+    set(640, 674, BASE + 12);                                  // 宽沟 34px：要助跑，必要时二段跳
+    set(820, 836, BASE + 10);                                  // 窄沟
+    set(960, 974, BASE - 20);                                  // 矮墙 20px：要跳
+    const pois = [
+      { type: 'lamp', x: 250, sx: 238 }, { type: 'bench', x: 445, sx: 445 }, { type: 'crate', x: 770, sx: 756 },
+      { type: 'ruin', x: 1010, sx: 996 }, { type: 'lamp', x: 1090, sx: 1076 }, { type: 'crate', x: 92, sx: 106 }
+    ];
+    return { H, pois };
+  }
+
+  /* ---------- 创建世界 ---------- */
+  function createWorld(seed, opts) {
+    opts = opts || {};
+    const ter = buildTerrain(), rng = mulberry32(seed || 1);
+    const w = { WW, BASE, H: ter.H, pois: ter.pois, rng, t: 0, agents: [], input: { dir: 0, run: false, crouch: false, jumpEdge: false, interactEdge: false, blinkEdge: false }, lineup: false, log: [], fx: [] };
+    const starts = opts.starts || [220, 345, 520, 760, 1000, 130];
+    Cast.CAST.forEach((spec, i) => {
+      const T = spec.traits, a = {
+        id: spec.id, spec, poser: Rig.poser(spec), tr: T,
+        x: starts[i % starts.length], y: BASE, vx: 0, vy: 0, face: i % 2 ? -1 : 1, grounded: true, loc: 'idle',
+        want: { dir: 0, run: false, jump: false, jump2: false, crouch: false, sprint: false, sneak: false, blink: false },
+        ab: spec.abilities || {}, suit: false, walkV: 30 + 14 * T.en, runV: 70 + 34 * T.en, sprintV: 112, cwalkV: 15, airV: 0, blT: 0, blDir: 1, blCd: 0, blinkMin: 10, blinkMax: 28, gapPick: null, t: rng() * 10, phase: 0,
+        preT: 0, landT: 0, landDur: 0.1, skidT: 0, flipT: -1, canDouble: false, jumpDest: null,
+        goal: { type: 'idle', t: 0.5 + rng() * 2 }, cd: 3 + rng() * 6, fleeCd: 0, senseT: rng(), talk: false, say: null, manual: false,
+        stats: { time: { idle: 0, walk: 0, run: 0, sprint: 0, cwalk: 0, skid: 0, pre: 0, air: 0, flip: 0, land: 0, crouch: 0, blinkPre: 0, blinkPost: 0 }, blinks: 0, goals: {}, jumps: 0, doubles: 0, chats: 0, refused: 0, flees: 0, blocked: 0, falls: 0 }
+      };
+      a.y = w.H[Math.round(a.x)];
+      w.agents.push(a);
+    });
+    w.step = dt => step(w, dt);
+    w.interact = a => interact(w, a);
+    w.setLineup = on => setLineup(w, on);
+    w.toggleSuit = (a, on) => { a.suit = on == null ? !a.suit : !!on; a.flipT = -1; return a.suit; };
+    return w;
+  }
+
+  const gx = (w, x) => w.H[clamp(Math.round(x), 0, WW - 1)];
+  const say = (a, text, dur) => { a.say = { text, t: dur || 2.4 }; };
+  const pick = (w, arr) => arr[Math.floor(w.rng() * arr.length)];
+  const goalName = a => a.goal.type;
+  function setGoal(a, g) { a.goal = g; a.stats.goals[g.type] = (a.stats.goals[g.type] || 0) + 1; }
+
+  /* ---------- 操控层：朝目标走，自动判断台阶、墙、沟并给出跳跃 ---------- */
+  function steer(w, a, tx, run, tol) {
+    const dx = tx - a.x;
+    if (Math.abs(dx) <= tol) return 'arrived';
+    const dir = dx > 0 ? 1 : -1, W = a.want;
+    W.dir = dir; W.run = run;
+    if (!a.grounded || a.loc === 'pre' || a.loc === 'land') return 'moving';
+    const rd = d => gx(w, a.x + dir * d), y = a.y;
+    for (let d = 2; d <= 14; d++) {                       // 前方有墙/高台阶
+      const rise = y - rd(d);
+      if (rise > STEP) {
+        if (rise > 24) return 'blocked';
+        if (d <= (run ? 10 : 7)) { W.jump = true; a.jumpDest = null; }
+        return 'moving';
+      }
+    }
+    const lim = Math.min(60, Math.abs(dx));
+    for (let d = 2; d <= lim; d++) {                      // 前方有沟
+      if (rd(d) - y > 5) {
+        let e = d; while (e < 140 && rd(e) - y > 5) e++;
+        const width = e - d;
+        if (width > 56) break;                            // 一直往下没有对岸：这是下坡，直接走下去
+        if (y - rd(e) > 20) return 'blocked';
+        if (width > 20 && a.ab.blink) {                    // 会瞬移的角色：宽沟有一半概率直接瞬移过去
+          if (a.gapPick == null) a.gapPick = w.rng() < 0.55 ? 'blink' : 'jump';
+          if (a.gapPick === 'blink') {
+            if (d <= 6 && a.blCd <= 0) { W.blink = true; a.blinkMin = e + 1; a.blinkMax = Math.min(60, e + 10); }
+            else if (d > 6) W.run = true;
+            return 'moving';
+          }
+        }
+        if (width > 20) W.run = true;                     // 宽沟：助跑
+        if (d <= 6) { W.jump = true; a.jumpDest = width > 20 ? a.x + dir * (e + 3) : null; }
+        return 'moving';
+      }
+    }
+    return 'moving';
+  }
+
+  /* ---------- 意图层 ---------- */
+  function weightedPick(w, opts) {
+    let tot = 0; for (const o of opts) tot += o[1];
+    let r = w.rng() * tot;
+    for (const o of opts) { r -= o[1]; if (r <= 0) return o[0]; }
+    return opts[0][0];
+  }
+  function flatNear(w, a, tx) {                           // 目标点别落在沟里
+    const base = a.y; let n = 0;
+    while (Math.abs(gx(w, tx) - base) > 5 && n++ < 40) tx += Math.sign(tx - a.x) * 3;
+    return clamp(tx, 24, WW - 24);
+  }
+  function think(w, a) {
+    const T = a.tr, r = w.rng;
+    let best = null, bs = -9;
+    if (a.cd <= 0) for (const o of w.agents) {
+      if (o === a) continue;
+      const d = Math.abs(o.x - a.x); if (d > 320) continue;
+      if (o.goal.type === 'chat' || o.goal.type === 'flee') continue;
+      const s = Cast.AFFINITY[a.id][o.id] + 0.35 + r() * 0.5 - d / 900;
+      if (s > bs) { bs = s; best = o; }
+    }
+    const opts = [['idle', 0.3 + T.pat * 1.0], ['wander', 0.8 + T.en * 1.5], ['poi', T.cur * 1.8]];
+    if (best && bs > 0.2) opts.push(['approach', T.soc * 2.6 * Math.min(1.2, bs)]);
+    const k = weightedPick(w, opts);
+    if (k === 'idle') setGoal(a, { type: 'idle', t: 1.5 + r() * 2.5 + T.pat * 4 });
+    else if (k === 'wander') {
+      const dir = r() < 0.5 ? -1 : 1, dist = 60 + r() * (120 + T.en * 160);
+      setGoal(a, { type: 'wander', tx: flatNear(w, a, a.x + dir * dist), run: r() < T.en * 0.55 && dist > 90, age: 0, sprint: !!a.ab.sprint && dist > 130 && r() < 0.7 });
+    } else if (k === 'poi') {
+      const ps = w.pois.slice().sort((p, q) => Math.abs(p.sx - a.x) + r() * 300 - Math.abs(q.sx - a.x) - r() * 300);
+      setGoal(a, { type: 'poi', poi: ps[0], stage: 'go', t: 0, age: 0, sneak: !!a.ab.sneak && Math.abs(ps[0].sx - a.x) < 160 && r() < 0.4 });
+    } else if (k === 'approach') setGoal(a, { type: 'approach', target: best, age: 0 });
+  }
+
+  function startChat(w, a, o) {
+    const c = { a, b: o, t: 6 + 8 * (a.tr.soc + o.tr.soc) / 2 + w.rng() * 3, lt: 0, spk: a, n: 0 };
+    setGoal(a, { type: 'chat', c }); setGoal(o, { type: 'chat', c });
+    a.stats.chats++; o.stats.chats++;
+    a.face = Math.sign(o.x - a.x) || a.face; o.face = -a.face;
+  }
+  function endChat(w, c) {
+    for (const p of [c.a, c.b]) {
+      p.talk = false; p.cd = 14 + w.rng() * 16;
+      setGoal(p, { type: 'idle', t: 1 + w.rng() * 2 });
+    }
+  }
+  /* a 向 o 搭话：o 按亲密度 + 自己的社交倾向决定接不接 */
+  function propose(w, a, o) {
+    const busy = o.goal.type === 'chat' || o.goal.type === 'flee' || !o.grounded;
+    const aff = Cast.AFFINITY[o.id][a.id], p = clamp(0.5 + 0.5 * aff + 0.3 * (o.tr.soc - 0.5), 0.05, 0.95);
+    if (!busy && w.rng() < p) { say(a, pick(w, a.spec.lines.greet), 2); say(o, pick(w, o.spec.lines.greet), 2); startChat(w, a, o); return true; }
+    a.stats.refused++; a.cd = 12; o.cd = Math.max(o.cd, 5);
+    if (!busy) {
+      say(o, pick(w, o.spec.lines.refuse), 2.4);
+      if (o.tr.cau > 0.8 && aff < -0.2) startFlee(w, o, a);
+    }
+    say(a, pick(w, a.spec.lines.react), 2.2);
+    if (a.goal.type !== 'idle') setGoal(a, { type: 'idle', t: 1.5 + w.rng() * 2 });
+    return false;
+  }
+  function startFlee(w, a, from) {
+    a.fleeCd = 9; a.stats.flees++;
+    setGoal(a, { type: 'flee', from, t: 2.2 + w.rng() * 1.5, run: a.tr.cau > 0.7 });
+    say(a, pick(w, a.spec.lines.flee), 2);
+  }
+  function interact(w, a) {                               // 玩家按 Y：向最近的人搭话
+    let o = null, bd = 60;
+    for (const q of w.agents) { if (q === a) continue; const d = Math.abs(q.x - a.x); if (d < bd) { bd = d; o = q; } }
+    if (!o) return false;
+    a.face = Math.sign(o.x - a.x) || a.face;
+    return propose(w, a, o);
+  }
+  function setLineup(w, on) {
+    w.lineup = on;
+    w.agents.forEach((a, i) => {
+      a.manual = false; a.say = null; a.talk = false;
+      if (on) { a.x = 190 + i * 26; a.y = gx(w, a.x); a.vx = a.vy = 0; a.grounded = true; a.loc = 'idle'; a.face = 1; setGoal(a, { type: 'hold' }); }
+      else setGoal(a, { type: 'idle', t: 0.5 + w.rng() * 1.5 });
+    });
+  }
+
+  function senseThreat(w, a, dt) {
+    a.senseT -= dt; a.fleeCd -= dt; if (a.senseT > 0) return; a.senseT = 0.25;
+    if (a.fleeCd > 0 || a.manual || ['chat', 'flee', 'hold'].includes(a.goal.type)) return;
+    for (const o of w.agents) {
+      if (o === a || Math.abs(o.x - a.x) > 30) continue;
+      const aff = Cast.AFFINITY[a.id][o.id];
+      if (aff >= -0.1) continue;
+      if (a.tr.cau > 0.7) { startFlee(w, a, o); return; }
+      if (aff < -0.15) {                                  // 暴躁型：嘟囔着走开
+        a.fleeCd = 9; say(a, pick(w, a.spec.lines.react), 2.2);
+        const dir = Math.sign(a.x - o.x) || 1;
+        setGoal(a, { type: 'wander', tx: flatNear(w, a, a.x + dir * (70 + w.rng() * 60)), run: false, age: 0 }); return;
+      }
+    }
+  }
+
+  function runGoal(w, a, dt) {
+    const g = a.goal, W = a.want, T = a.tr;
+    a.talk = false;
+    switch (g.type) {
+      case 'hold': break;
+      case 'idle':
+        g.t -= dt; if (g.talk) a.talk = true;
+        if (w.rng() < dt * 0.06 * (1 - T.pat * 0.7)) a.face = -a.face;     // 偶尔换个方向看
+        if (g.t <= 0) think(w, a);
+        break;
+      case 'wander': {
+        g.age += dt;
+        const res = steer(w, a, g.tx, g.run || g.sprint, 4);
+        if (g.sprint) W.sprint = true;
+        if (a.ab.blink && a.blCd <= 0 && a.grounded && Math.abs(g.tx - a.x) > 70 && w.rng() < dt * 0.07 && !W.blink) { W.blink = true; a.blinkMin = 10; a.blinkMax = 28; }   // 一时兴起瞬移一下
+        if (T.en > 0.6 && T.cau < 0.4 && a.grounded && a.loc !== 'pre' && w.rng() < dt * 0.14) { W.jump = true; a.jumpDest = null; a.joy = true; }   // 精力旺盛的人会蹦
+        if (res === 'blocked') a.stats.blocked++;
+        if (res !== 'moving' || g.age > 22) setGoal(a, { type: 'idle', t: 1 + w.rng() * 2 + T.pat * 4 });
+        break;
+      }
+      case 'poi': {
+        g.age += dt;
+        if (g.stage === 'go') {
+          const res = steer(w, a, g.poi.sx, !g.sneak && T.en > 0.7 && Math.abs(g.poi.sx - a.x) > 100, 3);
+          if (g.sneak) W.sneak = true;
+          if (res === 'blocked' || g.age > 25) setGoal(a, { type: 'idle', t: 1.5 });
+          else if (res === 'arrived') { g.stage = 'look'; g.t = 4 + T.pat * 8 + w.rng() * 3; a.face = Math.sign(g.poi.x - a.x) || a.face; if (T.cur > 0.6 || w.rng() < 0.3) say(a, pick(w, a.spec.lines.chat), 2.6); }
+        } else { g.t -= dt; if (g.t <= 0) setGoal(a, { type: 'idle', t: 1 + w.rng() * 2 }); }
+        break;
+      }
+      case 'approach': {
+        g.age += dt; const o = g.target;
+        if (o.goal.type === 'chat' || o.goal.type === 'flee' || g.age > 16) { a.cd = 8; setGoal(a, { type: 'idle', t: 1 }); break; }
+        const res = steer(w, a, o.x - Math.sign(o.x - a.x) * 18, T.en > 0.6 && Math.abs(o.x - a.x) > 80, 4);
+        if (res === 'blocked') { a.cd = 8; setGoal(a, { type: 'idle', t: 1 }); }
+        else if (Math.abs(o.x - a.x) < 28) { a.face = Math.sign(o.x - a.x) || a.face; propose(w, a, o); }
+        break;
+      }
+      case 'flee': {
+        g.t -= dt;
+        const dir = Math.sign(a.x - g.from.x) || (w.rng() < 0.5 ? 1 : -1);
+        const res = steer(w, a, clamp(a.x + dir * 200, 24, WW - 24), g.run, 2);
+        if (res !== 'moving' || g.t <= 0) {
+          if (T.cau > 0.8 || res === 'blocked') setGoal(a, { type: 'crouch', t: 2.5 + w.rng() * 3 });
+          else setGoal(a, { type: 'idle', t: 2 });
+        }
+        break;
+      }
+      case 'crouch': g.t -= dt; W.crouch = true; if (g.t <= 0) setGoal(a, { type: 'idle', t: 1.5 }); break;
+      case 'chat': {
+        const c = g.c, o = c.a === a ? c.b : c.a;
+        a.face = Math.sign(o.x - a.x) || a.face;
+        a.talk = c.spk === a;
+        if (c.a !== a) break;                             // 每段对话只由发起者推进
+        c.t -= dt; c.lt -= dt;
+        if (c.lt <= 0) {
+          if (c.n > 0) c.spk = c.spk === c.a ? c.b : c.a;
+          c.n++;
+          if (c.n > 1) say(c.spk, pick(w, c.spk.spec.lines.chat), 2.4);
+          c.lt = 2.5 + w.rng() * 0.8;
+          if (c.spk.tr.en > 0.8 && w.rng() < 0.35) { c.spk.want.jump = true; c.spk.joy = true; }   // 太兴奋就原地蹦一下
+        }
+        if (c.t <= 0) endChat(w, c);
+        break;
+      }
+    }
+  }
+
+  /* 瞬移：沿朝向在 [blinkMin, blinkMax] 内找最远的、地面平整的落点，找不到就取消 */
+  function doBlink(w, a) {
+    const dir = a.blDir; let nx = null;
+    for (let d = a.blinkMax; d >= a.blinkMin; d--) {
+      const x = clamp(a.x + dir * d, 16, WW - 16);
+      if (Math.abs(gx(w, x) - a.y) <= STEP) { nx = x; break; }
+    }
+    if (nx == null) { a.loc = 'idle'; a.blCd = 1; return; }
+    w.fx.push({ type: 'blink', id: a.id, x0: a.x, x1: nx, y: a.y, face: dir });
+    a.x = nx; a.y = gx(w, nx); a.loc = 'blinkPost'; a.blT = 0; a.vx = dir * 45; a.blCd = 2 + w.rng() * 2.5; a.stats.blinks++;
+    a.blinkMin = 10; a.blinkMax = 28;
+  }
+
+  /* ---------- 运动层：物理 + 状态 ---------- */
+  function physics(w, a, dt) {
+    const W = a.want;
+    a.t += dt;
+    const tgt = (v, t, acc) => v < t ? Math.min(t, v + acc * dt) : Math.max(t, v - acc * dt);
+    if (a.grounded) {
+      if (a.loc === 'pre') {
+        a.preT += dt; a.vx *= 0.94;
+        if (a.preT >= 0.12) { a.vy = -JV; a.grounded = false; a.loc = 'air'; a.canDouble = true; a.flipT = -1; a.stats.jumps++; if (W.dir === 0) a.airV = 0; w.fx.push({ type: 'puff', x: a.x, y: a.y }); }
+      } else if (a.loc === 'land') {
+        a.landT += dt; a.vx *= 0.86;
+        if (a.landT >= a.landDur) a.loc = 'idle';
+      }
+      else if (a.loc === 'blinkPre') {
+        a.blT += dt; a.vx = tgt(a.vx, 0, 300);
+        if (a.blT >= 0.09) doBlink(w, a);
+      } else if (a.loc === 'blinkPost') {
+        a.blT += dt; a.vx = tgt(a.vx, 0, 260);
+        if (a.blT >= 0.22) { a.loc = 'idle'; a.gapPick = null; }
+      }
+      if (a.grounded && a.loc !== 'pre' && a.loc !== 'land' && a.loc !== 'blinkPre' && a.loc !== 'blinkPost') {
+        if (W.blink && a.ab.blink && a.blCd <= 0) { a.loc = 'blinkPre'; a.blT = 0; a.blDir = W.dir || a.face; a.face = a.blDir; a.vx *= 0.3; }
+        else if (W.jump) { a.loc = 'pre'; a.preT = 0; a.airV = Math.abs(a.vx) > 8 ? Math.abs(a.vx) : (W.dir ? (W.run ? a.runV : a.walkV) : 0); if (!W.dir) a.vx = 0; }
+        else if (W.crouch || W.sneak) {
+          if (W.dir) { a.vx = tgt(a.vx, W.dir * a.cwalkV, 500); a.face = W.dir; a.loc = 'cwalk'; }
+          else { a.loc = 'crouch'; a.vx = tgt(a.vx, 0, 700); }
+        }
+        else {
+          const spr = W.sprint && a.ab.sprint;
+          let tv = W.dir ? W.dir * (spr ? a.sprintV : W.run ? a.runV : a.walkV) : 0, acc = 520;
+          if (a.skidT > 0) { a.skidT -= dt; tv = 0; acc = 700; }
+          else if (Math.abs(a.vx) > a.runV * 0.7 && (!W.dir || Math.sign(W.dir) !== Math.sign(a.vx))) { a.skidT = 0.16; a.face = Math.sign(a.vx); w.fx.push({ type: 'puff', x: a.x, y: a.y }); }
+          a.vx = tgt(a.vx, tv, acc);
+          if (W.dir && a.skidT <= 0) a.face = W.dir;
+          a.loc = a.skidT > 0 ? 'skid' : (Math.abs(a.vx) < 4 && !W.dir ? 'idle' : (spr && Math.abs(a.vx) > a.runV * 1.15 ? 'sprint' : W.run && Math.abs(a.vx) > a.walkV * 1.25 ? 'run' : 'walk'));
+          if (a.loc === 'idle') a.vx = 0;
+        }
+      }
+    } else {
+      // 空中：保持动量，二段跳
+      if (W.dir) a.face = W.dir;
+      a.vx = tgt(a.vx, W.dir ? W.dir * a.airV : a.vx, 260);
+      if (W.jump2) a.djBuf = 0.3; a.djBuf = (a.djBuf || 0) - dt;
+      let dj = a.djBuf > 0;
+      if (!dj && a.jumpDest != null && a.vy > 20) {       // 宽沟：预测落点不够远就补一次二段跳
+        const dir = Math.sign(a.jumpDest - a.x) || 1, dy = a.jumpDest - a.x;
+        const tl = (a.vy + Math.sqrt(a.vy * a.vy + 2 * G * Math.max(0, gx(w, a.jumpDest) - a.y))) / G;
+        if (dir * (dy - a.vx * tl) > 2) dj = true;
+      }
+      if (dj && a.canDouble && a.flipT < 0 && a.vy > -60) { a.vy = -DJV; a.canDouble = false; a.flipT = 0; a.djBuf = 0; a.stats.doubles++; a.jumpDest = null; w.fx.push({ type: 'puff', x: a.x, y: a.y }); if (a.suit) { w.fx.push({ type: 'puff', x: a.x - 2, y: a.y + 1 }); w.fx.push({ type: 'puff', x: a.x + 2, y: a.y + 1 }); } }
+      if (a.flipT >= 0) { a.flipT += dt; a.loc = 'flip'; if (a.flipT >= (a.suit ? 0.3 : 0.2)) { a.flipT = -1; a.loc = 'air'; } } else a.loc = 'air';
+    }
+    // 水平移动 + 地形
+    const nx = clamp(a.x + a.vx * dt, 14, WW - 14), h = gx(w, nx);
+    if (a.grounded) {
+      if (a.y - h > STEP) a.vx = 0;
+      else {
+        a.x = nx;
+        if (h - a.y > STEP) { a.grounded = false; a.vy = 0; a.loc = 'air'; a.airV = Math.abs(a.vx); a.canDouble = true; a.flipT = -1; a.stats.falls++; }
+        else a.y = h;
+      }
+    } else {
+      if (a.y > h + 1) a.vx = 0; else a.x = nx;
+      a.vy += G * dt; a.y += a.vy * dt;
+      const gh = gx(w, a.x);
+      if (a.vy >= 0 && a.y >= gh) { a.landDur = a.vy > 140 ? 0.16 : 0.09; a.y = gh; a.grounded = true; a.loc = 'land'; a.landT = 0; a.vx *= 0.6; a.flipT = -1; a.jumpDest = null; a.vy = 0; a.gapPick = null; if (a.landDur > 0.12) w.fx.push({ type: 'puff', x: a.x, y: a.y }); }
+    }
+    if (a.loc === 'walk' || a.loc === 'run' || a.loc === 'sprint' || a.loc === 'cwalk') a.phase += Math.abs(a.vx) * dt / (a.loc === 'sprint' ? 62 : a.loc === 'run' ? 46 : a.loc === 'cwalk' ? 14 : 26);
+    else if (a.loc === 'idle') a.phase = 0;
+    // 45° 待机与侧面动作之间插一帧“转身”过渡
+    if (a.loc === 'idle') { if (a.lastFace !== a.face) a.idleT = 0; a.idleT = (a.idleT || 0) + dt; }
+    else { if (a.prevLoc === 'idle') a.leaveT = 0.07; a.idleT = 0; }
+    a.leaveT = Math.max(0, (a.leaveT || 0) - dt); a.prevLoc = a.loc; a.lastFace = a.face;
+    a.blCd = Math.max(0, a.blCd - dt);
+    a.stats.time[a.loc] += dt; a.stats.gt = a.stats.gt || {}; a.stats.gt[a.goal.type] = (a.stats.gt[a.goal.type] || 0) + dt;
+  }
+
+  function step(w, dt) {
+    w.t += dt;
+    const inp = w.input;
+    for (const a of w.agents) {
+      const W = a.want; W.dir = 0; W.run = false; W.jump = false; W.jump2 = false; W.crouch = false; W.sprint = false; W.sneak = false; W.blink = false;
+      if (a.say) { a.say.t -= dt; if (a.say.t <= 0) a.say = null; }
+      a.cd -= dt;
+      if (a.goal.type === 'hold') { a.talk = false; }
+      else {
+        senseThreat(w, a, dt);
+        if (a.manual && a.goal.type !== 'chat') {
+          a.talk = false;
+          W.dir = inp.dir; W.run = inp.run; W.crouch = inp.crouch; W.sprint = inp.run && !!a.ab.sprint;
+          if (inp.blinkEdge) { W.blink = true; a.blinkMin = 10; a.blinkMax = 28; }
+          if (inp.jumpEdge) { if (a.grounded) W.jump = true; else W.jump2 = true; }
+          if (inp.interactEdge) interact(w, a);
+        } else runGoal(w, a, dt);
+      }
+      if (a.manual && a.goal.type === 'chat') { /* 对话期间交给对话系统 */ }
+      physics(w, a, dt);
+    }
+    inp.jumpEdge = false; inp.interactEdge = false; inp.blinkEdge = false;
+  }
+
+  /* ---------- 状态 → 姿势 ---------- */
+  function framePose(a) {
+    const P = a.poser; let po, phi = 0, up = 0, flame = 0, flash = false;
+    switch (a.loc) {
+      case 'walk': po = a.leaveT > 0 ? P.stand() : P.loco('walk', Math.floor(a.phase * 8) % 8); break;
+      case 'run': { const i = Math.floor(a.phase * 8) % 8; po = P.loco('run', i); if (P.runBob(i)) up = 1; break; }
+      case 'sprint': { const i = Math.floor(a.phase * 8) % 8; po = P.loco('sprint', i); if (P.runBob(i)) up = 1; break; }
+      case 'cwalk': po = P.loco('cwalk', Math.floor(a.phase * 8) % 8); break;
+      case 'skid': po = P.skid(); break;
+      case 'pre': po = P.pre(a.preT); break;
+      case 'land': po = P.land(a.landT); break;
+      case 'crouch': po = P.crouchIdle(); break;
+      case 'blinkPre': po = P.blinkWind(); flash = a.blT > 0.05; break;
+      case 'blinkPost': po = P.blinkLand(); flash = a.blT < 0.04; break;
+      case 'flip':
+        if (a.suit) { po = P.kick(Math.max(0, a.flipT)); flame = Math.max(0, Math.min(1, 1 - a.flipT / 0.3)); }
+        else { const f = P.flip(Math.max(0, a.flipT)); po = f.po; phi = f.phi; }
+        break;
+      case 'air': po = P.air(Math.round((-a.vy / 68) / 0.4) * 0.4); break;
+      default: po = a.idleT < 0.07 ? P.stand() : P.idle(a.t, a.talk);
+    }
+    return { po, phi, hy: P.hyGround(po), up, suit: a.suit, flame, flash };
+  }
+
+  return { WW, BASE, createWorld, framePose, step, buildTerrain, mulberry32 };
+});
+</script>
+<script>
+'use strict';
+const Rig = PixelRig, Cast = PixelCast, AI = PixelAI;
+const VW = 320, VH = 180, WW = AI.WW;
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ov = document.getElementById('ov');
+cv.width = VW; cv.height = VH;
+let SC = 3;
+function fit() {
+  SC = Math.max(2, Math.min(5, Math.floor((Math.min(window.innerWidth - 40, 1000)) / VW)));
+  cv.style.width = VW * SC + 'px'; cv.style.height = VH * SC + 'px';
+}
+fit(); addEventListener('resize', fit);
+const img = ctx.createImageData(VW, VH), buf = new Uint32Array(img.data.buffer);
+
+/* ---------- 颜色工具 ---------- */
+const cache = {};
+function C(hex) {
+  let v = cache[hex]; if (v !== undefined) return v;
+  const n = parseInt(hex.slice(1), 16); v = (255 << 24) | ((n & 255) << 16) | (n & 0xff00) | (n >> 16); return cache[hex] = v >>> 0;
+}
+function mix(c1, c2, t) {
+  const r = (c1 & 255) + ((c2 & 255) - (c1 & 255)) * t, g = ((c1 >> 8) & 255) + (((c2 >> 8) & 255) - ((c1 >> 8) & 255)) * t, b = ((c1 >> 16) & 255) + (((c2 >> 16) & 255) - ((c1 >> 16) & 255)) * t;
+  return ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
+}
+const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const bay = (x, y) => (BAY[(y & 3) * 4 + (x & 3)] + 0.5) / 16;
+function px(x, y, c) { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < VW && y < VH) buf[y * VW + x] = c; }
+function rect(x, y, w, h, c) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(x + i, y + j, c); }
+
+/* ---------- 灰雾场景 ---------- */
+const PAL = { sky0: C('#d5d7dd'), sky1: C('#bfc2ca'), sky2: C('#a9adb7'), far: C('#a3a7b2'), mid: C('#8a8f9c'), near: C('#5f636f'), nearHi: C('#757a87'), fog: C('#cfd1d7',),
+  gTop: C('#8e929d'), gHi: C('#757a86'), gBase: C('#52565f'), gDark: C('#43464e'), ink: C('#2f3138'), glow: C('#ece8d6') };
+const rngS = AI.mulberry32(7);
+function skyline(len, minH, maxH, wMin, wMax, step) {
+  const a = new Array(len).fill(0); let x = 0;
+  while (x < len) {
+    const w = wMin + Math.floor(rngS() * (wMax - wMin)), h = minH + Math.floor(rngS() * (maxH - minH)), broken = rngS() < 0.5, slope = rngS() < 0.3;
+    for (let i = 0; i < w && x + i < len; i++) { let hh = h; if (broken && i > w * 0.6) hh = h - Math.floor((i - w * 0.6) * 1.2); if (slope) hh = h - Math.floor(i * 0.5); a[x + i] = Math.max(2, hh); }
+    x += w + (rngS() < 0.3 ? Math.floor(rngS() * 14) : 0);
+  }
+  return a;
+}
+const FAR = skyline(1200, 30, 80, 14, 34), MID = skyline(1600, 24, 70, 10, 26), PIL = [];
+for (let x = 60; x < 2400; x += 220 + Math.floor(rngS() * 160)) PIL.push({ x, w: 14 + Math.floor(rngS() * 8), h: 90 + Math.floor(rngS() * 50), cut: Math.floor(rngS() * 16) });
+
+function drawLayer(arr, par, camX, base, col, win, t, fogAmt) {
+  const L = arr.length;
+  for (let sx = 0; sx < VW; sx++) {
+    const wx = Math.floor(sx + camX * par) % L, h = arr[(wx + L) % L], top = base - h;
+    for (let y = top; y < base + 40 && y < VH; y++) {
+      let c = col;
+      if (win && ((wx % 7) === 3) && ((y - top) % 9 === 4) && y - top > 5 && y - top < h - 6) c = mix(col, PAL.fog, 0.45);   // 窗洞
+      const f = fogAmt * (1 - (y - top) / (h + 20)) * 0.55;
+      if (f > 0 && bay(sx, y) < f) c = mix(c, PAL.fog, 0.5);
+      px(sx, y, c);
+    }
+  }
+}
+function drawBackground(camX, t) {
+  const bands = [PAL.sky0, PAL.sky1, PAL.sky2];
+  for (let y = 0; y < VH; y++) {
+    const k = (y / VH) * 2, i = Math.min(1, Math.floor(k)), f = k - i;
+    for (let x = 0; x < VW; x++) buf[y * VW + x] = bay(x, y) < f ? bands[i + 1] : bands[i];
+  }
+  drawLayer(FAR, 0.12, camX, 126, PAL.far, false, t, 1.0);
+  // 雾带
+  for (let y = 70; y < 138; y++) for (let x = 0; x < VW; x++) { const p = 0.5 * Math.exp(-Math.pow((y - 118) / 20, 2)); if (bay(x, y) < p) buf[y * VW + x] = mix(buf[y * VW + x], PAL.fog, 0.55); }
+  drawLayer(MID, 0.3, camX, 140, PAL.mid, true, t, 0.7);
+  // 近景残柱
+  const px0 = camX * 0.65;
+  for (const p of PIL) {
+    const sx = Math.floor(p.x - px0); if (sx < -40 || sx > VW + 10) continue;
+    for (let i = 0; i < p.w; i++) {
+      const top = 150 - p.h + (i < p.cut / 2 ? p.cut - i : 0);
+      for (let y = top; y < 152; y++) { let c = i < 3 ? PAL.nearHi : PAL.near; if ((y + i) % 17 === 0) c = mix(c, PAL.ink, 0.3); if (bay(sx + i, y) < 0.18 + (y - top) / p.h * -0.0 + (y < 110 ? 0.3 : 0)) c = mix(c, PAL.fog, 0.35); px(sx + i, y, c); }
+    }
+  }
+}
+function drawGround(camX, H) {
+  const cx = Math.floor(camX);
+  for (let sx = 0; sx < VW; sx++) {
+    const wx = Math.max(0, Math.min(WW - 1, cx + sx)), top = H[wx];
+    for (let y = top; y < VH; y++) {
+      const d = y - top; let c = PAL.gBase;
+      if (d === 0) c = PAL.gTop; else if (d < 3) c = PAL.gHi;
+      else if (d % 14 === 0 || ((wx + Math.floor(d / 14) * 9) % 26) === 0) c = PAL.gDark;
+      else if (bay(wx, y) < 0.12) c = PAL.gDark;
+      if (d > 14) c = mix(c, PAL.gDark, Math.min(0.5, (d - 14) / 40));
+      px(sx, y, c);
+    }
+  }
+}
+function drawPOI(p, camX, t) {
+  const sx = Math.floor(p.x - camX), y = AI_H[Math.max(0, Math.min(WW - 1, p.x))];
+  if (sx < -30 || sx > VW + 30) return;
+  if (p.type === 'lamp') {
+    rect(sx, y - 40, 2, 40, PAL.ink); rect(sx - 3, y - 2, 8, 2, PAL.ink); rect(sx - 4, y - 44, 10, 5, PAL.ink);
+    rect(sx - 3, y - 43, 8, 3, mix(PAL.glow, C('#ffffff'), 0.4 + 0.1 * Math.sin(t * 3 + p.x)));
+    for (let j = -14; j <= 14; j++) for (let i = -16; i <= 16; i++) { const d = Math.hypot(i, j * 1.2) / 16; if (d < 1 && bay(sx + i, y - 41 + j) < (1 - d) * 0.5) { const q = (sx + i) | 0, r = (y - 41 + j) | 0; if (q >= 0 && q < VW && r >= 0 && r < VH) buf[r * VW + q] = mix(buf[r * VW + q], PAL.glow, 0.5); } }
+  } else if (p.type === 'crate') {
+    rect(sx - 7, y - 13, 14, 13, C('#5e5a55')); rect(sx - 7, y - 13, 14, 2, C('#7d7870')); rect(sx - 7, y - 1, 14, 1, C('#403d3a'));
+    for (let i = 0; i < 12; i++) { px(sx - 6 + i, y - 12 + i, C('#403d3a')); px(sx + 5 - i, y - 12 + i, C('#403d3a')); }
+  } else if (p.type === 'bench') {
+    rect(sx - 11, y - 8, 22, 2, C('#4b4e57')); rect(sx - 11, y - 14, 22, 2, C('#4b4e57')); rect(sx - 10, y - 8, 2, 8, C('#33363d')); rect(sx + 8, y - 8, 2, 8, C('#33363d')); rect(sx - 10, y - 14, 2, 6, C('#33363d')); rect(sx + 8, y - 14, 2, 6, C('#33363d'));
+  } else if (p.type === 'ruin') {
+    for (let i = 0; i < 12; i++) { const top = y - 46 + (i > 7 ? (i - 7) * 4 : 0); for (let j = top; j < y; j++) px(sx - 6 + i, j, i < 3 ? PAL.nearHi : ((j + i) % 13 === 0 ? PAL.gDark : PAL.near)); }
+  }
+}
+
+/* ---------- 世界 / 角色 ---------- */
+const world = AI.createWorld(11), AI_H = world.H;
+let selected = 0, camX = 0, paused = false, speed = 1, lineup = false;
+function pxA(x, y, c, a) {
+  x |= 0; y |= 0;
+  if (x >= 0 && y >= 0 && x < VW && y < VH) buf[y * VW + x] = a >= 0.99 ? c : mix(buf[y * VW + x], c, a);
+}
+const puffs = [], streaks = [], rings = [], sparks = [], bghosts = [], trails = {};
+const PF = [[[-1,0],[1,0]],[[-2,0],[2,0],[-1,-1],[1,-1]],[[-3,-1],[3,-1],[-2,-2],[2,-2]],[[-3,-2],[3,-2]]];
+function stepFX(dt) {
+  while (world.fx.length) {
+    const e = world.fx.shift();
+    if (e.type === 'puff') puffs.push({ x: e.x, y: e.y, age: 0 });
+    else if (e.type === 'blink') {
+      const ag = world.agents.find(x => x.id === e.id);
+      const spec = ag ? ag.spec : Cast.CAST[5], suit = ag ? ag.suit : false;
+      const P = Rig.poser(spec), po = P.blinkWind(), hy = P.hyGround(po);
+      streaks.push({ x0: e.x0, x1: e.x1, y: e.y - 12, age: 0 });
+      rings.push({ x: e.x1, y: e.y - 12, age: 0 });
+      rings.push({ x: e.x0, y: e.y - 12, age: 0.08 });
+      [0, 0.35, 0.7].forEach(f => bghosts.push({ x: e.x0 + (e.x1 - e.x0) * f, y: e.y, spec, po, hy, suit, flip: e.face < 0, age: 0 }));
+      for (let i = 0; i < 12; i++) sparks.push({ x: e.x0 + (e.x1 - e.x0) * Math.random(), y: e.y - 12 + (Math.random() * 10 - 5), vy: -10 - Math.random() * 18, age: 0 });
+    }
+  }
+  const keep = (arr, max) => { for (let i = arr.length - 1; i >= 0; i--) { arr[i].age += dt; if (arr[i].age >= max) arr.splice(i, 1); } };
+  keep(puffs, 0.28); keep(streaks, 0.26); keep(rings, 0.26); keep(bghosts, 0.28);
+  for (let i = sparks.length - 1; i >= 0; i--) { sparks[i].age += dt; sparks[i].y += sparks[i].vy * dt; if (sparks[i].age >= 0.34) sparks.splice(i, 1); }
+  world.agents.forEach(a => {
+    const tr = trails[a.id] || (trails[a.id] = { t: 0, list: [] });
+    tr.t += dt;
+    if (a.loc === 'sprint' && tr.t >= 0.035) {
+      tr.t = 0;
+      const fp = AI.framePose(a);
+      tr.list.unshift({ x: a.x, y: a.y, up: fp.up, spec: a.spec, po: fp.po, hy: fp.hy, phi: fp.phi, suit: fp.suit, flip: a.face < 0, age: 0 });
+      if (tr.list.length > 3) tr.list.pop();
+    }
+    for (let i = tr.list.length - 1; i >= 0; i--) { tr.list[i].age += dt; if (tr.list[i].age > 0.16 || a.loc !== 'sprint') tr.list.splice(i, 1); }
+  });
+}
+function drawGrid(g, x0, y0, flip, alpha, tint, smearDir, smearLen) {
+  const cyan = C('#96ebff');
+  for (let r = 0; r < Rig.GH; r++) for (let c = 0; c < Rig.GW; c++) {
+    const col = g[r][c]; if (!col) continue;
+    const sx = x0 + (flip ? Rig.GW - 1 - c : c), sy = y0 + r;
+    if (smearLen) for (let k = 1; k <= smearLen; k++) pxA(sx - smearDir * k, sy, cyan, 0.45 * (1 - k / (smearLen + 1)));
+    pxA(sx, sy, tint || C(col), alpha);
+  }
+}
+function drawFXBack(camX) {
+  const cx = Math.floor(camX), cyan = C('#96ebff'), white = C('#ebfcff');
+  bghosts.forEach(b => {
+    const g = Rig.charGrid(b.spec, b.po, b.hy, 0, { suit: b.suit });
+    drawGrid(g, Math.round(b.x) - 16 - cx, Math.round(b.y) - 76, b.flip, 0.55 * (1 - b.age / 0.28), cyan, 0, 0);
+  });
+  streaks.forEach(s => {
+    const ht = s.age < 0.06 ? 2 : s.age < 0.14 ? 1 : 0, a = 1 - s.age / 0.26;
+    const xa = Math.round(Math.min(s.x0, s.x1)) - cx, xb = Math.round(Math.max(s.x0, s.x1)) - cx, sy = Math.round(s.y);
+    for (let x = xa; x <= xb; x++) for (let r = -ht; r <= ht; r++) {
+      if (s.age > 0.1 && ((x + r) & 1)) continue;
+      pxA(x, sy + r, r === 0 ? white : cyan, a);
+    }
+  });
+}
+function drawFXFront(camX) {
+  const cx = Math.floor(camX), dust = C('#cfd3dc'), cyan = C('#bef5ff'), white = C('#ffffff');
+  puffs.forEach(p => {
+    const fr = PF[Math.min(3, Math.floor(p.age / 0.07))], sx = Math.round(p.x) - cx, sy = Math.round(p.y);
+    fr.forEach(d => pxA(sx + d[0], sy + d[1], dust, 0.85));
+  });
+  rings.forEach(r => {
+    const rr = 2 + r.age * 30, a = 1 - r.age / 0.26, sx = Math.round(r.x) - cx, sy = Math.round(r.y);
+    for (let k = 0; k < 20; k++) { const an = k / 20 * Math.PI * 2; pxA(Math.round(sx + rr * Math.cos(an)), Math.round(sy + rr * Math.sin(an) * 0.85), cyan, a); }
+  });
+  sparks.forEach(s => pxA(Math.round(s.x) - cx, Math.round(s.y), Math.random() < 0.5 ? white : cyan, 1 - s.age / 0.34));
+}
+function drawChar(a, camX, t) {
+  const fp = AI.framePose(a), g = Rig.charGrid(a.spec, fp.po, fp.hy, fp.phi, { suit: fp.suit, flame: fp.flame });
+  const cx = Math.floor(camX), x0 = Math.round(a.x) - 16 - cx, y0 = Math.round(a.y) - 76 - fp.up;
+  // 冲刺残影
+  const tr = trails[a.id];
+  if (tr && tr.list.length) {
+    const al = [0.38, 0.22, 0.11];
+    for (let k = tr.list.length - 1; k >= 0; k--) {
+      const s = tr.list[k], sg = Rig.charGrid(s.spec, s.po, s.hy, s.phi, { suit: s.suit });
+      drawGrid(sg, Math.round(s.x) - 16 - cx, Math.round(s.y) - 76 - s.up, s.flip, al[k] || 0.1, 0, 0, 0);
+    }
+  }
+  // 影子
+  const sy = Math.round(a.y);
+  for (let i = -6; i <= 6; i++) { const q = Math.round(a.x) + i - cx; if (q >= 0 && q < VW && sy < VH) { const gy = AI_H[Math.max(0, Math.min(WW - 1, Math.round(a.x) + i))]; if (Math.abs(gy - sy) < 6 && bay(q, gy) < 0.65 - Math.abs(i) / 14) px(q, gy, PAL.gDark); } }
+  const flip = a.face < 0;
+  const smear = a.loc === 'blinkPost' && a.blT < 0.14 ? Math.round(8 * (1 - a.blT / 0.14)) : 0;
+  drawGrid(g, x0, y0, flip, 1, fp.flash ? C('#e8fbff') : 0, a.blDir || a.face, smear);
+  return { sx: Math.round(a.x) - cx, top: y0 + 52 };
+}
+function drawFog(camX, t) {
+  for (let y = 90; y < VH; y++) for (let x = 0; x < VW; x++) {
+    const p = 0.16 * (0.5 + 0.5 * Math.sin((x + camX * 1.3) * 0.035 + t * 0.35 + y * 0.12)) * ((y - 90) / 90 > 0.6 ? 0.7 : 1);
+    if (bay(x, y) < p) buf[y * VW + x] = mix(buf[y * VW + x], PAL.fog, 0.4);
+  }
+  const cxm = VW / 2, cym = VH / 2;                                       // 暗角
+  for (let y = 0; y < VH; y++) for (let x = 0; x < VW; x++) { const d = Math.hypot((x - cxm) / cxm, (y - cym) / cym); if (d > 0.9 && bay(x, y) < (d - 0.9) * 0.9) buf[y * VW + x] = mix(buf[y * VW + x], PAL.ink, 0.45); }
+}
+function drawMarker(sx, top, t) {
+  const y = top - 8 + Math.round(Math.sin(t * 5));
+  for (let i = 0; i < 4; i++) rect(sx - 3 + i, y + i, 7 - i * 2, 1, C('#f4f5f7'));
+}
+
+/* ---------- 气泡 ---------- */
+const bubEls = world.agents.map(() => { const d = document.createElement('div'); d.className = 'bub'; d.style.display = 'none'; ov.appendChild(d); return d; });
+const tagEls = world.agents.map((a) => { const d = document.createElement('div'); d.className = 'tag'; d.textContent = a.spec.name + ' · ' + a.spec.tag; ov.appendChild(d); return d; });
+function placeOverlay(tops) {
+  world.agents.forEach((a, i) => {
+    const t = tops[i], b = bubEls[i], tg = tagEls[i];
+    const X = t.sx * SC, Y = t.top * SC;
+    tg.style.left = X + 'px'; tg.style.top = (Y - 9) + 'px'; tg.style.display = (a.say || t.sx < -20 || t.sx > VW + 20) ? 'none' : '';
+    if (a.say && t.sx > -20 && t.sx < VW + 20) {
+      if (b.textContent !== a.say.text) b.textContent = a.say.text;
+      b.style.display = ''; b.style.left = Math.max(40, Math.min(VW * SC - 40, X)) + 'px'; b.style.top = (Y - 4) + 'px';
+    } else b.style.display = 'none';
+  });
+}
+
+/* ---------- 角色卡片（待机骨架动画） ---------- */
+const cards = document.getElementById('cards'), cardCtx = [];
+const BARS = [['soc', '社交'], ['en', '精力'], ['cau', '谨慎'], ['cur', '好奇'], ['pat', '耐心']];
+world.agents.forEach((a, i) => {
+  const s = a.spec, el = document.createElement('div'); el.className = 'card';
+  el.innerHTML = '<canvas width="32" height="30"></canvas><h3>' + s.name + '<small>' + s.tag + '</small></h3><div class="d">' + s.desc + '</div><div class="i">待机：' + s.idleName + '</div><div class="tr">' +
+    BARS.map(([k, n]) => '<span>' + n + '</span><i><b style="width:' + Math.round(s.traits[k] * 100) + '%"></b></i>').join('') + '</div>';
+  el.onclick = () => select(i); cards.appendChild(el); cardCtx.push({ el, c: el.querySelector('canvas').getContext('2d') });
+});
+function drawCards(t) {
+  cardCtx.forEach((cc, i) => {
+    const a = world.agents[i], P = a.poser, po = P.idle(t, false), g = Rig.charGrid(a.spec, po, P.hyGround(po), 0, { suit: a.suit });
+    cc.c.fillStyle = '#9a9ea9'; cc.c.fillRect(0, 0, 32, 30);
+    cc.c.fillStyle = '#6a6e7a'; cc.c.fillRect(0, 28, 32, 2);
+    for (let r = 0; r < 30; r++) for (let c = 0; c < 32; c++) { const col = g[r + 48][c]; if (col) { cc.c.fillStyle = col; cc.c.fillRect(c, r, 1, 1); } }
+    cc.el.classList.toggle('sel', i === selected);
+  });
+}
+function syncSuitBtn() {
+  const a = world.agents[selected], b = document.getElementById('bSuit');
+  if (b) { b.classList.toggle('on', !!a.suit); b.textContent = '太空服：' + (a.suit ? '开' : '关'); }
+}
+function select(i) { selected = i; if (world.agents[i].manual === false && takeOn) setTake(false); syncSuitBtn(); }
+
+/* ---------- 输入 ---------- */
+const keys = {}; let takeOn = false;
+function setTake(on) {
+  takeOn = on; const a = world.agents[selected];
+  world.agents.forEach(o => { if (o.manual) { o.manual = false; if (o.goal.type !== 'chat') { o.goal = { type: 'idle', t: 0.5 }; } } });
+  if (on && !lineup) { a.manual = true; if (a.goal.type !== 'chat') a.goal = { type: 'manual' }; }
+  document.getElementById('bTake').classList.toggle('on', on);
+  document.getElementById('bTake').textContent = on ? '放开，交还给 AI' : '接管所选角色';
+}
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase(); if (e.repeat && (k === ' ' || k === 'w' || k === 'arrowup')) { e.preventDefault(); return; }
+  if (k >= '1' && k <= '6') { if (takeOn) setTake(false); select(+k - 1); return; }
+  if (k === 'u') { world.toggleSuit(world.agents[selected]); syncSuitBtn(); return; }
+  if (k === 't') { setTake(!takeOn); return; }
+  const move = ['a', 'd', 'arrowleft', 'arrowright', ' ', 'w', 'arrowup', 's', 'arrowdown', 'shift', 'y', 'j', 'k'].includes(k);
+  if (!move) return; e.preventDefault();
+  if (!takeOn && !lineup) setTake(true);
+  keys[k] = true;
+  if (k === ' ' || k === 'w' || k === 'arrowup') world.input.jumpEdge = true;
+  if (k === 'y') world.input.interactEdge = true;
+  if (k === 'j' || k === 'k') world.input.blinkEdge = true;
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+cv.addEventListener('pointerdown', e => {
+  const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) / SC + camX; let bi = -1, bd = 22;
+  world.agents.forEach((a, i) => { const d = Math.abs(a.x - mx); if (d < bd) { bd = d; bi = i; } });
+  if (bi >= 0) { if (takeOn) setTake(false); select(bi); }
+});
+document.getElementById('bPause').onclick = e => { paused = !paused; e.target.textContent = paused ? '继续' : '暂停'; e.target.classList.toggle('on', paused); };
+document.getElementById('bFast').onclick = e => { speed = speed === 1 ? 3 : 1; e.target.classList.toggle('on', speed > 1); };
+document.getElementById('bSuit').onclick = () => { world.toggleSuit(world.agents[selected]); syncSuitBtn(); };
+document.getElementById('bBlink').onclick = () => { if (!takeOn && !lineup) setTake(true); world.input.blinkEdge = true; };
+document.getElementById('bLine').onclick = e => { lineup = !lineup; if (lineup) setTake(false); world.setLineup(lineup); e.target.classList.toggle('on', lineup); e.target.textContent = lineup ? '放开，恢复自由行动' : '集合对比待机'; };
+
+/* ---------- 主循环 ---------- */
+let last = performance.now(), acc = 0, T = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (!paused) {
+    acc += dt * speed; const h = 1 / 60;
+    while (acc >= h) {
+      const inp = world.input; inp.dir = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0); inp.run = !!keys['shift']; inp.crouch = !!(keys['s'] || keys['arrowdown']);
+      world.step(h); stepFX(h); acc -= h; T += h;
+    }
+  }
+  const sel = world.agents[selected], target = lineup ? 240 : sel.x;
+  camX += (Math.max(0, Math.min(WW - VW, target - VW / 2)) - camX) * Math.min(1, dt * 5);
+  drawBackground(camX, T);
+  drawGround(camX, AI_H);
+  world.pois.forEach(p => drawPOI(p, camX, T));
+  drawFXBack(camX);
+  const order = world.agents.map((a, i) => i).sort((p, q) => (p === selected) - (q === selected));
+  const tops = []; order.forEach(i => { tops[i] = drawChar(world.agents[i], camX, T); });
+  drawFXFront(camX);
+  drawFog(camX, T);
+  drawMarker(tops[selected].sx, tops[selected].top - 8, T);
+  ctx.putImageData(img, 0, 0);
+  placeOverlay(tops); drawCards(T);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__world = world;
+</script>
+</body>
+</html>

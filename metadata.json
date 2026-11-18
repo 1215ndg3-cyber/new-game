@@ -1,0 +1,6 @@
+{
+  "name": "PixelCast",
+  "description": "15-Bone Pixel Art Character Rig & Autonomous 6-Character Personality AI Simulation with Spacesuit, Blink & Sprint",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
