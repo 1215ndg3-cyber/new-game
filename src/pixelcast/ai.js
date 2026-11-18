@@ -63,8 +63,8 @@
         id: spec.id, spec, poser: Rig.poser(spec), tr: T,
         x: starts[i % starts.length], y: BASE, vx: 0, vy: 0, face: i === 5 ? 1 : (i % 2 ? -1 : 1), grounded: true, loc: 'idle',
         want: { dir: 0, run: false, jump: false, jump2: false, crouch: false, sprint: false, sneak: false, blink: false },
-        ab: spec.abilities || {}, suit: false, weapon: null, aim: 90, wAction: 'aim', wT: 0, wDur: 0, ammo: 6, maxAmmo: 6, aimMouse: false,
-        comboStep: 0, comboResetT: 0, comboQueued: false, skillFired: false, swingHitDone: false, hitstopT: 0, combatHoldT: 0, hurtT: 0,
+        ab: spec.abilities || {}, suit: false, weapon: null, aim: 90, wAction: 'aim', wT: 0, wDur: 0, ammo: 6, maxAmmo: 6, aimMouse: false, pendingAim: null,
+        comboStep: 0, comboResetT: 0, comboGraceT: 0, comboQueued: false, skillFired: false, flourishHitsDone: 0, swingHitDone: false, hitstopT: 0, combatHoldT: 0, hurtT: 0,
         walkV: 30 + 14 * T.en, runV: 70 + 34 * T.en, sprintV: 112, cwalkV: 15, airV: 0, blT: 0, blDir: 1, blCd: 0, blinkMin: 10, blinkMax: 28, gapPick: null, t: rng() * 10, phase: 0,
         preT: 0, landT: 0, landDur: 0.1, skidT: 0, flipT: -1, canDouble: false, jumpDest: null,
         goal: { type: 'idle', t: 0.5 + rng() * 2 }, cd: 3 + rng() * 6, fleeCd: 0, senseT: rng(), talk: false, say: null, manual: false,
@@ -166,27 +166,27 @@
     w.setWeapon = (a, id) => {
       a.weapon = (!id || id === 'none') ? null : id;
       a.wAction = 'aim'; a.wT = 0; a.wDur = 0; a.ammo = a.maxAmmo;
-      a.comboStep = 0; a.comboResetT = 0; a.comboQueued = false; a.skillFired = false; a.swingHitDone = false; a.hitstopT = 0; a.combatHoldT = 0;
+      a.comboStep = 0; a.comboResetT = 0; a.comboGraceT = 0; a.comboQueued = false; a.skillFired = false; a.flourishHitsDone = 0; a.danceHitsDone = 0; a.dualSubHitDone = false; a.swingHitDone = false; a.hitstopT = 0; a.combatHoldT = 0;
+      a.pendingAim = null;
       a.aimMouse = !!a.weapon;
       return a.weapon;
     };
     w.cycleWeapon = a => {
-      const order = [null, 'blade', 'katana', 'greatsword', 'pistol'];
+      const order = [null, 'blade', 'dualBlades', 'katana', 'greatsword', 'pistol'];
       const next = order[(order.indexOf(a.weapon) + 1) % order.length];
       return w.setWeapon(a, next);
     };
     w.aimAt = (a, wx, wy) => {
       if (!a) return;
-      const dx = wx - a.x, dy = wy - (a.y - 16);
-      if (a.weapon && a.loc !== 'skid' && a.loc !== 'blinkPre' && a.loc !== 'blinkPost') {
-        if (Math.abs(dx) > 0.5) a.face = dx >= 0 ? 1 : -1;
-      }
-      const lx = dx * (a.face || 1), ly = dy;
-      a.aim = (Math.abs(lx) < 0.01 && Math.abs(ly) < 0.01) ? 90 : Math.atan2(lx, ly) * 180 / Math.PI;
+      a.pendingAim = { wx, wy };
       a.aimMouse = true;
+      // 任何武器在播放一段动作序列帧期间 (combo1..4 / skill / shoot / reload) 严格锁定朝向与瞄准角，仅在招式间隙应用新鼠标方向！
+      if (isActionAimLocked(a)) return;
+      applyAimCoords(a, wx, wy);
     };
     w.reload = a => {
       if (!a || !a.weapon || a.weapon !== 'pistol' || a.wAction === 'reload') return false;
+      flushPendingAim(a);
       a.wAction = 'reload'; a.wT = 0; a.wDur = 0.68; a.combatHoldT = 0.42; a.stats.reloads = (a.stats.reloads || 0) + 1;
       w.fx.push({ type: 'reload', id: a.id, x: a.x, y: a.y - 14, face: a.face });
       return 'reload';
@@ -200,10 +200,12 @@
         return a.wAction;
       }
       const wMeta = (Rig.WEAPONS && Rig.WEAPONS[a.weapon]) || (Rig.WEAPONS && Rig.WEAPONS.blade) || {};
-      const comboCount = wMeta.comboCount || (a.weapon === 'katana' ? 4 : a.weapon === 'greatsword' ? 2 : 3);
-      const durs = wMeta.comboDurs || (a.weapon === 'katana' ? [0.38, 0.24, 0.24, 0.52] : a.weapon === 'greatsword' ? [0.62, 0.72] : [0.42, 0.44, 0.54]);
-      // 若上一段挥砍已结束且未衔接（没有连起来），则必须从第一段 (combo1, step=0) 重新开始打
-      const isChaining = !!(a.wAction && a.wAction.startsWith('combo'));
+      const comboCount = wMeta.comboCount || 4;
+      const durs = wMeta.comboDurs || (a.weapon === 'dualBlades' ? [0.30, 0.30, 0.34, 0.44] : a.weapon === 'katana' ? [0.38, 0.24, 0.24, 0.52] : a.weapon === 'greatsword' ? [0.58, 0.54, 0.68, 0.78] : [0.36, 0.34, 0.42, 0.44]);
+      // 支持按住连击与松手短暂招式间隙 (comboGraceT) 内变向衔接下一段；超过间隙则从第一段重新起手
+      const isChaining = !!(a.wAction && a.wAction.startsWith('combo')) || ((a.comboGraceT || 0) > 0 && (a.comboStep || 0) > 0);
+      // 在招式切换间隙立即应用期间缓存的最新鼠标瞄准方向，随后在下一段序列帧中再次锁定朝向！
+      flushPendingAim(a);
       const nextStep = forceStep != null
         ? (forceStep % comboCount)
         : isChaining
@@ -211,8 +213,11 @@
           : 0;
       a.comboStep = (nextStep + 1) % comboCount;
       a.comboResetT = durs[nextStep];
+      a.comboGraceT = 0;
       a.comboQueued = false;
       a.swingHitDone = false;
+      a.dualSubHitDone = false;
+      a.whirlSpinHitDone = false;
       a.wAction = 'combo' + (nextStep + 1);
       a.wT = 0;
       a.wDur = durs[nextStep];
@@ -220,7 +225,7 @@
       a.stats.combos = (a.stats.combos || 0) + 1;
       const isMoving = !!(a.want && a.want.dir) || a.loc === 'walk' || a.loc === 'run' || a.loc === 'sprint' || a.loc === 'cwalk';
       if (a.grounded && !isMoving) {
-        const impArr = a.weapon === 'katana' ? [12, 10, 10, 16] : a.weapon === 'greatsword' ? [12, 18] : [8, 6, 10];
+        const impArr = a.weapon === 'dualBlades' ? [13, 12, 18, 16] : a.weapon === 'katana' ? [12, 10, 10, 16] : a.weapon === 'greatsword' ? [12, 14, 18, 22] : [8, 7, 10, 14];
         let imp = impArr[nextStep] != null ? impArr[nextStep] : 8;
         // 若正前方木桩已在贴身距离内，减小微垫步避免穿过木桩
         for (const d of w.dummies) {
@@ -240,27 +245,36 @@
       if (a.weapon === 'pistol') return w.reload(a);
       if (!a.weapon) a.weapon = 'blade';
       if (a.wAction === 'skill' && a.wT < a.wDur * 0.75) return 'skill';
+      flushPendingAim(a);
       a.wAction = 'skill';
       a.wT = 0;
-      a.wDur = a.weapon === 'katana' ? 0.88 : a.weapon === 'greatsword' ? 0.86 : 0.76;
+      a.wDur = a.weapon === 'katana' ? 0.88 : a.weapon === 'greatsword' ? 1.16 : a.weapon === 'dualBlades' ? 1.24 : 1.28;
       a.combatHoldT = 0.42;
       a.skillFired = false;
+      a.flourishHitsDone = 0;
+      a.danceHitsDone = 0;
+      a.dualSubHitDone = false;
       a.swingHitDone = false;
+      a.lionLeap1Done = false;
+      a.lionLeap2Done = false;
+      a.lionHit1Done = false;
+      a.lionHit2Done = false;
       a.comboStep = 0;
       a.comboResetT = 0;
+      a.comboGraceT = 0;
       a.comboQueued = false;
       a.stats.skills = (a.stats.skills || 0) + 1;
-      const isMoving = !!(a.want && a.want.dir) || a.loc === 'walk' || a.loc === 'run' || a.loc === 'sprint' || a.loc === 'cwalk';
-      if (a.grounded && !isMoving && a.weapon !== 'katana') a.vx = -(a.face || 1) * 10;
       w.fx.push({ type: 'skillCharge', id: a.id, weapon: a.weapon, x: a.x, y: a.y - 16, face: a.face, aim: a.aim });
       return 'skill';
     };
     w.shoot = a => {
       if (!a) return false;
       if (!a.weapon) a.weapon = 'blade';
-      if (a.weapon === 'blade' || a.weapon === 'sword' || a.weapon === 'katana' || a.weapon === 'greatsword') return w.swing(a);
+      if (a.weapon === 'blade' || a.weapon === 'sword' || a.weapon === 'dualBlades' || a.weapon === 'katana' || a.weapon === 'greatsword') return w.swing(a);
       if (a.wAction === 'reload') return false;
+      if (a.wAction === 'shoot' && a.wDur > 0 && (a.wT / a.wDur) < 0.85) return 'shoot';
       if (a.ammo <= 0) return w.reload(a);
+      flushPendingAim(a);
       a.ammo--;
       a.wAction = 'shoot'; a.wT = 0; a.wDur = 0.18; a.combatHoldT = 0.42; a.stats.shots = (a.stats.shots || 0) + 1;
       const ar = (a.aim || 90) * Math.PI / 180, ux = Math.sin(ar) * a.face, uy = Math.cos(ar);
@@ -270,6 +284,23 @@
       return 'shoot';
     };
     return w;
+  }
+
+  function isActionAimLocked(a) {
+    return !!(a && a.weapon && a.wAction && a.wAction !== 'aim' && a.wAction !== 'idle');
+  }
+  function applyAimCoords(a, wx, wy) {
+    if (!a || wx == null || wy == null) return;
+    const dx = wx - a.x, dy = wy - (a.y - 16);
+    if (a.weapon && a.loc !== 'skid' && a.loc !== 'blinkPre' && a.loc !== 'blinkPost') {
+      if (Math.abs(dx) > 0.5) a.face = dx >= 0 ? 1 : -1;
+    }
+    const lx = dx * (a.face || 1), ly = dy;
+    a.aim = (Math.abs(lx) < 0.01 && Math.abs(ly) < 0.01) ? 90 : Math.atan2(lx, ly) * 180 / Math.PI;
+  }
+  function flushPendingAim(a) {
+    if (!a || !a.pendingAim) return;
+    applyAimCoords(a, a.pendingAim.wx, a.pendingAim.wy);
   }
 
   const gx = (w, x) => w.H[clamp(Math.round(x), 0, WW - 1)];
@@ -518,9 +549,9 @@
         a.blT += dt; a.vx = tgt(a.vx, 0, 260);
         if (a.blT >= 0.22) { a.loc = 'idle'; a.gapPick = null; }
       }
-      const lockAim = !!(a.weapon && (a.manual || a.aimMouse));
+      const lockAim = !!(a.weapon && (a.manual || a.aimMouse || isActionAimLocked(a)));
       if (a.grounded && a.loc !== 'pre' && a.loc !== 'land' && a.loc !== 'blinkPre' && a.loc !== 'blinkPost') {
-        if (W.blink && a.ab.blink && a.blCd <= 0) { a.loc = 'blinkPre'; a.blT = 0; a.blDir = W.dir || a.face; a.face = a.blDir; a.vx *= 0.3; }
+        if (W.blink && a.ab.blink && a.blCd <= 0) { a.loc = 'blinkPre'; a.blT = 0; a.blDir = W.dir || a.face; if (!isActionAimLocked(a)) a.face = a.blDir; a.vx *= 0.3; }
         else if (W.jump) { a.loc = 'pre'; a.preT = 0; a.airV = Math.abs(a.vx) > 8 ? Math.abs(a.vx) : (W.dir ? (W.run ? a.runV : a.walkV) : 0); if (!W.dir) a.vx = 0; }
         else if (W.crouch || W.sneak) {
           if (W.dir) { a.vx = tgt(a.vx, W.dir * a.cwalkV, 500); if (!lockAim) a.face = W.dir; a.loc = 'cwalk'; }
@@ -539,7 +570,7 @@
       }
     } else {
       // 空中：保持动量，二段跳
-      const lockAim = !!(a.weapon && (a.manual || a.aimMouse));
+      const lockAim = !!(a.weapon && (a.manual || a.aimMouse || isActionAimLocked(a)));
       if (W.dir && !lockAim) a.face = W.dir;
       a.vx = tgt(a.vx, W.dir ? W.dir * a.airV : a.vx, 260);
       if (W.jump2) a.djBuf = 0.3; a.djBuf = (a.djBuf || 0) - dt;
@@ -579,7 +610,14 @@
     } else if (a.combatHoldT > 0) {
       a.combatHoldT = Math.max(0, a.combatHoldT - dt);
     }
-    if (a.comboResetT > 0 && (!a.wAction || a.wAction === 'aim')) {
+    if ((!a.wAction || a.wAction === 'aim') && (a.comboGraceT || 0) > 0) {
+      a.comboGraceT = Math.max(0, a.comboGraceT - dt);
+      if (a.comboGraceT <= 0) {
+        a.comboStep = 0;
+        a.comboResetT = 0;
+      }
+    }
+    if (a.comboResetT > 0 && (!a.wAction || a.wAction === 'aim') && !(a.comboGraceT > 0)) {
       a.comboResetT = Math.max(0, a.comboResetT - dt);
       if (a.comboResetT <= 0) a.comboStep = 0;
     }
@@ -588,110 +626,321 @@
       if (!a.want || !a.want.dir) a.vx *= 0.65;
     } else if (a.weapon && a.wAction && a.wAction !== 'aim') {
       a.wT += dt;
-      // 近战连击命中木桩判定：长刀第4段大上段重下劈在 p >= 0.52 触发，大剑势大力沉3帧前摇在 p >= 0.40 触发，其余挥砍在 p >= 0.28 触发顿帧、木桩受击摇晃与伤害跳字
-      const comboHitThr = (a.weapon === 'katana' && a.wAction === 'combo4') ? 0.52 : a.weapon === 'greatsword' ? 0.40 : 0.28;
+      // 大剑第4段 360° 大回旋斩在 p >= 0.26 先触发一次旋风扫背连段伤害，随后在 p >= 0.42 触发全周身终结重击！
+      if (a.weapon === 'greatsword' && a.wAction === 'combo4' && !a.whirlSpinHitDone && a.wDur > 0 && (a.wT / a.wDur) >= 0.26) {
+        a.whirlSpinHitDone = true;
+        for (const d of (w.dummies || [])) {
+          if (Math.abs(d.x - a.x) <= 50 && Math.abs(d.y - a.y) <= 24) {
+            w.hitDummy(d, Math.sign(d.x - a.x) || (a.face || 1), 28, false, a);
+          }
+        }
+      }
+      // 铁质双刀前3段双持二连击（一段左劈+右撩、二段双曲剑剪刀十字双斩、三段360°陀螺双环回旋）的副手先行连段伤害判定！
+      if (
+        a.weapon === 'dualBlades' &&
+        (a.wAction === 'combo1' || a.wAction === 'combo2' || a.wAction === 'combo3') &&
+        !a.dualSubHitDone &&
+        a.wDur > 0 &&
+        (a.wT / a.wDur) >= 0.25
+      ) {
+        a.dualSubHitDone = true;
+        const face = a.face || 1;
+        const isSpin = a.wAction === 'combo3';
+        const subDmg = a.wAction === 'combo3' ? 16 : a.wAction === 'combo2' ? 15 : 14;
+        for (const d of (w.dummies || [])) {
+          const dx = (d.x - a.x) * face;
+          const inRange = isSpin ? Math.abs(d.x - a.x) <= 44 : (dx >= -6 && dx <= 42);
+          if (inRange && Math.abs(d.y - a.y) <= 24) {
+            w.hitDummy(d, isSpin ? (Math.sign(d.x - a.x) || face) : face, subDmg, false, a);
+            if (a.hitstopT > 0.020) a.hitstopT = 0.020;
+          }
+        }
+      }
+      const comboHitThr =
+        (a.weapon === 'katana' && a.wAction === 'combo4')
+          ? 0.52
+          : a.weapon === 'greatsword'
+          ? 0.40
+          : a.weapon === 'dualBlades'
+          ? (a.wAction === 'combo1' ? 0.54 : a.wAction === 'combo2' ? 0.38 : 0.42)
+          : 0.28;
       if (a.wAction.startsWith('combo') && !a.swingHitDone && a.wDur > 0 && (a.wT / a.wDur) >= comboHitThr) {
         a.swingHitDone = true;
         const stepIdx = a.wAction === 'combo4' ? 4 : a.wAction === 'combo3' ? 3 : a.wAction === 'combo2' ? 2 : 1;
-        let dmg = stepIdx === 3 ? 38 : stepIdx === 2 ? 24 : 18;
-        let isHeavy = stepIdx === 3;
-        if (a.weapon === 'katana') {
+        let dmg = stepIdx === 4 ? 42 : stepIdx === 3 ? 36 : stepIdx === 2 ? 24 : 18;
+        let isHeavy = stepIdx >= 3;
+        if (a.weapon === 'dualBlades') {
+          dmg = stepIdx === 4 ? 38 : stepIdx === 3 ? 18 : stepIdx === 2 ? 16 : 15;
+          isHeavy = stepIdx === 4;
+        } else if (a.weapon === 'katana') {
           dmg = stepIdx === 4 ? 46 : stepIdx === 3 ? 28 : stepIdx === 2 ? 22 : 18;
           isHeavy = stepIdx === 4;
         } else if (a.weapon === 'greatsword') {
-          dmg = stepIdx === 2 ? 58 : 38;
+          dmg = stepIdx === 4 ? 66 : stepIdx === 3 ? 58 : stepIdx === 2 ? 44 : 38;
           isHeavy = true;
         }
-        const reach = (a.weapon === 'katana' || a.weapon === 'greatsword') ? 46 : 38;
+        const isAllAround = (a.weapon === 'greatsword' && a.wAction === 'combo4') || (a.weapon === 'dualBlades' && a.wAction === 'combo3');
+        const reach = (a.weapon === 'greatsword' && a.wAction === 'combo4')
+          ? 52
+          : (a.weapon === 'katana' || a.weapon === 'greatsword')
+          ? 48
+          : a.weapon === 'dualBlades'
+          ? (stepIdx === 4 ? 46 : 43)
+          : stepIdx === 4
+          ? 48
+          : 44;
         for (const d of (w.dummies || [])) {
           const dx = (d.x - a.x) * (a.face || 1);
-          if (dx >= -6 && dx <= reach && Math.abs(d.y - a.y) <= 22) {
-            w.hitDummy(d, a.face || 1, dmg, isHeavy, a);
+          const inRange = isAllAround ? Math.abs(d.x - a.x) <= reach : (dx >= -6 && dx <= reach);
+          if (inRange && Math.abs(d.y - a.y) <= 24) {
+            w.hitDummy(d, isAllAround ? (Math.sign(d.x - a.x) || (a.face || 1)) : (a.face || 1), dmg, isHeavy, a);
+            if (a.weapon === 'dualBlades' && !isHeavy && a.hitstopT > 0.022) a.hitstopT = 0.022;
           }
         }
       }
-      const skillFireThr = (a.weapon === 'katana' || a.weapon === 'greatsword') ? 0.42 : 0.56;
-      if (a.wAction === 'skill' && !a.skillFired && a.wDur > 0 && (a.wT / a.wDur) >= skillFireThr) {
-        a.skillFired = true;
+      // 双刀右键秘技「鬼人乱舞」(Demon Dance · 1.24s)：随 16 帧序列依次出现触发 5 段高频疾斩 + 终结十字裂空重击！
+      if (a.weapon === 'dualBlades' && a.wAction === 'skill' && a.wDur > 0) {
+        const sp = a.wT / a.wDur;
+        const face = a.face || 1;
         const isMoving = !!(a.want && a.want.dir) || a.loc === 'walk' || a.loc === 'run' || a.loc === 'sprint' || a.loc === 'cwalk';
-        if (a.weapon === 'katana') {
-          // 长刀右键「纳刀聚气·爆星独立三连环绕刀光」：蓄力时刀鞘口吸引粒子，p=0.42 爆发成一颗小星，
-          // 在人物正前方独立世界坐标图层（不随人物移动）打出快速环绕半周身的 3 道序列帧刀光，并同步触发三段伤害判定（18 -> 22 -> 32）！
+        const dHits = a.danceHitsDone || 0;
+        const triggerDanceHit = (hitIndex, dmg, heavy, allAround, reachPx) => {
+          a.danceHitsDone = hitIndex;
+          w.fx.push({
+            type: 'demonDance',
+            stage: hitIndex,
+            id: a.id,
+            x: a.x + face * (allAround ? 0 : 12),
+            y: a.y - 16,
+            face,
+            aim: a.aim || 90,
+          });
           for (const d of (w.dummies || [])) {
-            const dx = (d.x - a.x) * (a.face || 1);
-            if (dx >= -8 && dx <= 48 && Math.abs(d.y - a.y) <= 24) {
-              w.hitDummy(d, a.face || 1, 18, false, a);
+            const dx = (d.x - a.x) * face;
+            const inRange = allAround ? Math.abs(d.x - a.x) <= reachPx : (dx >= -8 && dx <= reachPx);
+            if (inRange && Math.abs(d.y - a.y) <= 24) {
+              w.hitDummy(d, allAround ? (Math.sign(d.x - a.x) || face) : face, dmg, heavy, a);
+              if (!heavy && a.hitstopT > 0.020) a.hitstopT = 0.020;
             }
           }
-          if (!w.katanaBursts) w.katanaBursts = [];
-          w.katanaBursts.push({
-            x: a.x,
-            y: a.y,
-            face: a.face || 1,
-            aim: a.aim || 90,
-            age: 0,
-            hitsDone: 1,
-            agent: a,
-          });
-          w.fx.push({
-            type: 'katanaTear',
-            id: a.id,
-            x: a.x,
-            y: a.y,
-            face: a.face || 1,
-            aim: a.aim || 90,
-          });
-        } else {
-          if (a.grounded && !isMoving) a.vx = (a.face || 1) * 20;
-          // 蓄力剑气斩挥出瞬间若近身有木桩，也直接造成斩击伤害
-          const skDmg = a.weapon === 'greatsword' ? 52 : 32;
-          for (const d of (w.dummies || [])) {
-            const dx = (d.x - a.x) * (a.face || 1);
-            if (dx >= -4 && dx <= 46 && Math.abs(d.y - a.y) <= 22) {
-              w.hitDummy(d, a.face || 1, skDmg, true, a);
-            }
-          }
-          const ar = (a.aim != null ? a.aim : 90) * Math.PI / 180;
-          const ux = Math.sin(ar) * (a.face || 1), uy = Math.cos(ar);
-          w.fx.push({
-            type: 'swordWave',
-            id: a.id,
-            x: a.x + ux * 10,
-            y: (a.y - 16) + uy * 8,
-            ux,
-            uy,
-            face: a.face || 1,
-            aim: a.aim || 90,
-          });
+        };
+        if (sp >= 0.125 && dHits < 1) {
+          if (a.grounded && !isMoving) a.vx = face * 6;
+          triggerDanceHit(1, 13, false, false, 42);
+        } else if (sp >= 0.250 && dHits < 2) {
+          triggerDanceHit(2, 13, false, false, 42);
+        } else if (sp >= 0.375 && dHits < 3) {
+          if (a.grounded && !isMoving) a.vx = face * 6;
+          triggerDanceHit(3, 15, false, false, 43);
+        } else if (sp >= 0.500 && dHits < 4) {
+          triggerDanceHit(4, 16, false, true, 42);
+        } else if (sp >= 0.625 && dHits < 5) {
+          a.skillFired = true;
+          if (a.grounded && !isMoving) a.vx = face * 10;
+          triggerDanceHit(5, 32, true, false, 46);
         }
+      }
+      // 长剑右键秘技「流云千瓣剑花」：随 16 帧双环 ∞ 剑影与旋身绽星依次触发 4 段连绵剑花伤害判定！
+      if ((a.weapon === 'blade' || a.weapon === 'sword') && a.wAction === 'skill' && a.wDur > 0) {
+        const sp = a.wT / a.wDur;
+        const face = a.face || 1;
+        const isMoving = !!(a.want && a.want.dir) || a.loc === 'walk' || a.loc === 'run' || a.loc === 'sprint' || a.loc === 'cwalk';
+        const fHits = a.flourishHitsDone || 0;
+        const triggerFlourishHit = (hitIndex, dmg, heavy, allAround, reachPx) => {
+          a.flourishHitsDone = hitIndex;
+          w.fx.push({
+            type: 'swordFlourish',
+            stage: hitIndex,
+            id: a.id,
+            x: a.x + face * (allAround ? 0 : 12),
+            y: a.y - 16,
+            face,
+            aim: a.aim || 90,
+          });
+          for (const d of (w.dummies || [])) {
+            const dx = (d.x - a.x) * face;
+            const inRange = allAround ? Math.abs(d.x - a.x) <= reachPx : (dx >= -8 && dx <= reachPx);
+            if (inRange && Math.abs(d.y - a.y) <= 24) {
+              w.hitDummy(d, allAround ? (Math.sign(d.x - a.x) || face) : face, dmg, heavy, a);
+              if (!heavy && a.hitstopT > 0.024) a.hitstopT = 0.024;
+            }
+          }
+        };
+        if (sp >= 0.125 && fHits < 1) {
+          if (a.grounded && !isMoving) a.vx = face * 7;
+          triggerFlourishHit(1, 15, false, false, 42);
+        } else if (sp >= 0.250 && fHits < 2) {
+          triggerFlourishHit(2, 16, false, false, 42);
+        } else if (sp >= 0.438 && fHits < 3) {
+          triggerFlourishHit(3, 18, false, true, 40);
+        } else if (sp >= 0.625 && fHits < 4) {
+          a.skillFired = true;
+          if (a.grounded && !isMoving) a.vx = face * 10;
+          triggerFlourishHit(4, 28, true, false, 46);
+        }
+      }
+      // 大剑右键战技「勇猛狮子斩」(Savage Lion's Claw)：跃起 360° 前空翻重斩 #1 → 借势再跃起 360° 前空翻终结重斩 #2！
+      if (a.weapon === 'greatsword' && a.wAction === 'skill' && a.wDur > 0) {
+        const sp = a.wT / a.wDur;
+        const face = a.face || 1;
+        const calcLionForwardVx = baseImp => {
+          let imp = baseImp;
+          for (const d of (w.dummies || [])) {
+            const dist = (d.x - a.x) * face;
+            if (dist >= 4 && dist <= 34 && Math.abs(d.y - gx(w, a.x)) <= 20) {
+              imp = Math.min(imp, Math.max(0, (dist - 14) * 1.4));
+            }
+          }
+          return face * imp;
+        };
+        if (sp >= 0.01 && !a.lionLeap1Done) {
+          a.lionLeap1Done = true;
+          a.vy = -124;
+          a.grounded = false;
+          a.loc = 'air';
+          a.canDouble = false;
+          a.flipT = -1;
+          a.vx = calcLionForwardVx(26);
+          a.airV = Math.abs(a.vx);
+          w.fx.push({ type: 'puff', x: a.x, y: a.y });
+        } else if (sp >= 0.18 && sp < 0.25 && !a.grounded) {
+          if (a.vy < 170) a.vy += 980 * dt;
+        }
+        if (sp >= 0.25 && !a.lionHit1Done) {
+          a.lionHit1Done = true;
+          const gh1 = gx(w, a.x);
+          a.y = gh1;
+          a.vy = 0;
+          a.grounded = true;
+          a.loc = 'idle';
+          a.vx *= 0.2;
+          w.fx.push({ type: 'puff', x: a.x + face * 10, y: gh1 });
+          for (const d of (w.dummies || [])) {
+            const dx = (d.x - a.x) * face;
+            if (dx >= -8 && dx <= 52 && Math.abs(d.y - a.y) <= 26) {
+              w.hitDummy(d, face, 48, true, a);
+            }
+          }
+        }
+        if (sp >= 0.375 && !a.lionLeap2Done) {
+          a.lionLeap2Done = true;
+          a.vy = -132;
+          a.grounded = false;
+          a.loc = 'air';
+          a.canDouble = false;
+          a.flipT = -1;
+          a.vx = calcLionForwardVx(28);
+          a.airV = Math.abs(a.vx);
+          w.fx.push({ type: 'puff', x: a.x, y: a.y });
+        } else if (sp >= 0.55 && sp < 0.625 && !a.grounded) {
+          if (a.vy < 185) a.vy += 1060 * dt;
+        }
+        if (sp >= 0.625 && !a.lionHit2Done) {
+          a.lionHit2Done = true;
+          a.skillFired = true;
+          const gh2 = gx(w, a.x);
+          a.y = gh2;
+          a.vy = 0;
+          a.grounded = true;
+          a.loc = 'idle';
+          a.vx = 0;
+          w.fx.push({ type: 'puff', x: a.x + face * 12, y: gh2 });
+          for (const d of (w.dummies || [])) {
+            const dx = (d.x - a.x) * face;
+            if (dx >= -8 && dx <= 54 && Math.abs(d.y - a.y) <= 26) {
+              w.hitDummy(d, face, 68, true, a);
+            }
+          }
+        }
+      }
+      if (a.wAction === 'skill' && a.weapon === 'katana' && !a.skillFired && a.wDur > 0 && (a.wT / a.wDur) >= 0.42) {
+        a.skillFired = true;
+        // 长刀右键「纳刀聚气·爆星独立三连环绕刀光」：蓄力时刀鞘口吸引粒子，p=0.42 爆发成一颗小星，
+        // 在人物正前方独立世界坐标图层（不随人物移动）打出快速环绕半周身的 3 道序列帧刀光，并同步触发三段伤害判定（18 -> 22 -> 32）！
+        for (const d of (w.dummies || [])) {
+          const dx = (d.x - a.x) * (a.face || 1);
+          if (dx >= -8 && dx <= 48 && Math.abs(d.y - a.y) <= 24) {
+            w.hitDummy(d, a.face || 1, 18, false, a);
+          }
+        }
+        if (!w.katanaBursts) w.katanaBursts = [];
+        w.katanaBursts.push({
+          x: a.x,
+          y: a.y,
+          face: a.face || 1,
+          aim: a.aim || 90,
+          age: 0,
+          hitsDone: 1,
+          agent: a,
+        });
+        w.fx.push({
+          type: 'katanaTear',
+          id: a.id,
+          x: a.x,
+          y: a.y,
+          face: a.face || 1,
+          aim: a.aim || 90,
+        });
       }
       const holdChain = a.wAction.startsWith('combo') && ((a.manual && w.input.attackHold) || a.comboQueued);
+      const isMidComboRelease =
+        !holdChain &&
+        (a.weapon === 'blade' || a.weapon === 'sword' || a.weapon === 'dualBlades' || a.weapon === 'katana' || a.weapon === 'greatsword') &&
+        (a.wAction === 'combo1' || a.wAction === 'combo2' || a.wAction === 'combo3') &&
+        a.wDur > 0 &&
+        (a.wT / a.wDur) >= (a.weapon === 'greatsword' ? 0.84 : a.weapon === 'katana' ? 0.78 : 0.80);
       if (holdChain && a.wDur > 0 && (a.wT / a.wDur) >= 0.94) {
         w.swing(a, a.comboStep);
+      } else if (isMidComboRelease) {
+        // 近战武器未打完一整套连段就松开鼠标：在当前斩击刀光收半消散后直接回到 45° 待机，同时保留 0.16s 招式间隙供自由随鼠标转向并点击衔接下一招！
+        a.wAction = 'aim';
+        a.wT = 0;
+        a.wDur = 0;
+        a.combatHoldT = 0;
+        a.comboGraceT = 0.16;
+        a.comboQueued = false;
+        if (a.grounded && (!W || !W.dir)) {
+          a.vx = 0;
+          a.skidT = 0;
+          a.loc = 'idle';
+          a.leaveT = 0;
+        }
+        flushPendingAim(a);
       } else if (a.wT >= a.wDur) {
         if (a.wAction === 'reload') {
           a.ammo = a.maxAmmo;
           a.wAction = 'aim';
           a.wT = 0;
+          flushPendingAim(a);
           if (a.manual && w.input.attackHold) w.shoot(a);
         } else if (a.wAction === 'shoot') {
+          a.wAction = 'aim';
+          a.wT = 0;
+          flushPendingAim(a);
           if (a.ammo <= 0) {
             w.reload(a);
           } else if (a.manual && w.input.attackHold) {
             w.shoot(a);
-          } else {
-            a.wAction = 'aim';
-            a.wT = 0;
           }
         } else if (holdChain) {
           w.swing(a, a.comboStep);
         } else {
-          // 挥砍动作结束且未继续连击：立即归零连段计数，下次出剑必定从第一段开始
+          // 终结段或战技结束且未继续连击：立即归零连段计数、释放鼠标转向锁定并干净回到待机
           a.wAction = 'aim';
           a.wT = 0;
+          a.wDur = 0;
+          a.combatHoldT = 0;
           a.comboStep = 0;
           a.comboResetT = 0;
+          a.comboGraceT = 0;
           a.comboQueued = false;
+          if (a.grounded && (!W || !W.dir)) {
+            a.vx = 0;
+            a.skidT = 0;
+            a.loc = 'idle';
+            a.leaveT = 0;
+          }
+          flushPendingAim(a);
         }
       }
     }

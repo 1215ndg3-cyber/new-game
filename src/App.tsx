@@ -138,15 +138,19 @@ const BARS: Array<[string, string]> = [
 const ACTION_MODES = [
   { id: 'katanaCombo', label: '长刀·四段连段 (16帧长序列 · 前摇→劈完带刀光→武器不动刀光收半)' },
   { id: 'katanaIai', label: '长刀右键·鞘口吸粒爆星+独立层环绕3连刀光 (Detached Orbit FX)' },
-  { id: 'greatswordCombo', label: '巨型大剑·二段重连击 (肩扛待机走路 · 拖地上撩+狮子奋迅崩地砸)' },
-  { id: 'greatswordCleave', label: '大剑二段分解·狮子奋迅崩地重砸 (Earth-Shatter Slam · 8帧)' },
+  { id: 'greatswordCombo', label: '巨型大剑·四段重连击 (16帧 · 拖地上撩→扭腰平扫→狮子奋迅→转身360°大回旋斩)' },
+  { id: 'greatswordCleave', label: '大剑三段分解·狮子奋迅崩地重砸 (Earth-Shatter Slam · 8帧)' },
+  { id: 'greatswordWhirlwind', label: '大剑四段终结·转身360°大回旋斩 (Whirlwind Cleave · 8帧)' },
+  { id: 'greatswordLionClaw', label: '大剑右键战技·勇猛狮子斩 (16帧 · 跃起360°前空翻连斩两次)' },
   { id: 'armedIdle45', label: '持武 45° 待机 (Weapon Idle 45°)' },
   { id: 'walkBack', label: '持武后退走 (Walk Back)' },
   { id: 'runBack', label: '持武后退跑 (Run Back)' },
-  { id: 'swordCombo', label: '剑模组·三连击 (Sword 3-Combo · 8帧)' },
-  { id: 'horizSlash', label: '一段分解·向前横斩 (Horizontal Slash · 8帧)' },
-  { id: 'swordSkill', label: '剑模组·蓄力剑气 (Sword Skill · 8帧)' },
-  { id: 'bladeSwing', label: '三段分解·举顶后仰下劈 (Overhead Cleave · 8帧)' },
+  { id: 'swordCombo', label: '铁质长剑·四段连击 (16帧 · 疾风平斩→掠月上挑→裂空下劈→回风贯日刺)' },
+  { id: 'horizSlash', label: '长剑一段分解·疾风平斩 (3D Horizontal Slash · 8帧)' },
+  { id: 'swordSkill', label: '长剑右键秘技·流云连环剑花 (16帧 · 四道3D刀光依次出现+旋身定星)' },
+  { id: 'bladeSwing', label: '长剑四段终结·回风贯日刺 (Spiral Thrust · 8帧)' },
+  { id: 'dualBladesCombo', label: '铁质双刀·四段连击 (16帧 · 交替二连→剪刀十字斩→360°陀螺回旋→飞身双翼撕裂)' },
+  { id: 'dualBladesSkill', label: '双刀右键秘技·鬼人乱舞 (16帧 · 交刃蓄势+四道疾斩依次出现+终结十字裂空)' },
   { id: 'pistolAim', label: '手臂 360° 瞄准 (Aim 360°)' },
   { id: 'pistolShoot', label: '手枪开火后座 (Shoot)' },
   { id: 'pistolReload', label: '手枪战术换弹 (Reload)' },
@@ -444,7 +448,16 @@ export default function App() {
       .catch(() => setFileContent('// Failed to load preview'));
   }, [activeFileTab]);
 
-  const inspectFrameCount = inspectMode === 'katanaCombo' ? 16 : 8;
+  const inspectFrameCount =
+    inspectMode === 'katanaCombo' ||
+    inspectMode === 'greatswordCombo' ||
+    inspectMode === 'greatswordLionClaw' ||
+    inspectMode === 'swordCombo' ||
+    inspectMode === 'dualBladesCombo' ||
+    inspectMode === 'dualBladesSkill' ||
+    (inspectMode === 'swordSkill' && inspectWeapon !== 'katana')
+      ? 16
+      : 8;
 
   // Regenerate procedural NPC batch when seed or part filters change
   useEffect(() => {
@@ -710,9 +723,9 @@ export default function App() {
         if (ctx) {
           const sampleActs = [
             { id: 'katana', act: 'combo1', p: 0.42 },
-            { id: 'katana', act: 'combo2', p: 0.42 },
+            { id: 'dualBlades', act: 'combo2', p: 0.42 },
             { id: 'katana', act: 'combo3', p: 0.42 },
-            { id: 'katana', act: 'combo4', p: 0.56 },
+            { id: 'dualBlades', act: 'combo3', p: 0.42 },
             { id: 'greatsword', act: 'combo1', p: 0.42 },
             { id: 'greatsword', act: 'combo2', p: 0.42 },
             { id: 'greatsword', act: 'skill', p: 0.42 },
@@ -811,6 +824,16 @@ export default function App() {
           '45°持枪·呼气整体降',
           '45°持枪·低姿待发',
         ];
+        const dualIdleLabels = [
+          '45°双刀·猎鹰戒备站立',
+          '45°双刀·吸气整体升',
+          '45°双刀·主刃寒芒流转',
+          '45°双刀·副刃银光呼应',
+          '45°双刀·沉肩蓄势待发',
+          '45°双刀·环视前方猎场',
+          '45°双刀·呼气整体降',
+          '45°双刀·双牙稳姿归位',
+        ];
         labels.push(
           wid === 'pistol'
             ? pistolIdleLabels[i]
@@ -818,6 +841,8 @@ export default function App() {
             ? katanaIdleLabels[i]
             : wid === 'greatsword'
             ? gsIdleLabels[i]
+            : wid === 'dualBlades'
+            ? dualIdleLabels[i]
             : swordIdleLabels[i]
         );
       } else if (inspectMode === 'walkBack') {
@@ -857,17 +882,17 @@ export default function App() {
           { act: 'combo1', p: 0.14, name: '1-1 前摇·按鞘拔刀蓄势' },
           { act: 'combo1', p: 0.28, name: '1-2 劈完·向前横扫满刀光(3D扁月牙)' },
           { act: 'combo1', p: 0.56, name: '1-3 刀不动·扁月牙刀光收回一半' },
-          { act: 'combo1', p: 0.72, name: '1-4 收势·余光消散衔接二段' },
+          { act: 'combo1', p: 0.72, name: '1-4 收势·定格消散(松手直回待机)' },
           // 第2段：极速反手斜上挑（加快帧速 0.24s）
           { act: 'combo2', p: 0.14, name: '2-1 前摇·低身反手引刀' },
           { act: 'combo2', p: 0.28, name: '2-2 劈完·极速斜上挑满刀光' },
           { act: 'combo2', p: 0.56, name: '2-3 刀不动·上挑刀光收回一半' },
-          { act: 'combo2', p: 0.72, name: '2-4 收势·高举衔接三段下劈' },
+          { act: 'combo2', p: 0.72, name: '2-4 收势·定格消散(松手直回待机)' },
           // 第3段：极速正手斜下劈（加快帧速 0.24s，与二段构成快速上下二连斩）
           { act: 'combo3', p: 0.14, name: '3-1 前摇·高举正手引刀' },
           { act: 'combo3', p: 0.28, name: '3-2 劈完·极速斜下劈满刀光' },
           { act: 'combo3', p: 0.56, name: '3-3 刀不动·下劈刀光收回一半' },
-          { act: 'combo3', p: 0.72, name: '3-4 收势·压刃蓄势大上段' },
+          { act: 'combo3', p: 0.72, name: '3-4 收势·定格消散(松手直回待机)' },
           // 第4段：大上段重下劈（播放速度不变 0.52s，慢出刀蓄势 4 帧后巨弧劈落）
           { act: 'combo4', p: 0.14, name: '4-1 前摇·双手大上段高举' },
           { act: 'combo4', p: 0.36, name: '4-2 前摇·大上段满蓄慢出刀' },
@@ -894,56 +919,111 @@ export default function App() {
         labels.push(iaiNames[i]);
       } else if (inspectMode === 'greatswordCombo') {
         const gsComboFrames = [
-          // 一段：肩扛卸力·拖地狂风上撩斩（前摇 -> 劈完满刀光 -> 剑不动刀光收回一半 -> 过肩蓄势）
+          // 一段：肩扛卸力·拖地狂风上撩斩
           { act: 'combo1', p: 0.14, name: '1-1 前摇·肩扛卸力拖地蓄势' },
           { act: 'combo1', p: 0.42, name: '1-2 劈完·拖地狂风上撩满刀光' },
           { act: 'combo1', p: 0.70, name: '1-3 剑不动·上撩刀光收回一半' },
-          { act: 'combo1', p: 0.84, name: '1-4 收势·巨刃高举衔接二段' },
-          // 二段：狮子奋迅·过肩蓄力崩地重砸（前摇 -> 崩地满刀光 -> 嵌地不动刀光收回一半 -> 重新扛回肩上）
-          { act: 'combo2', p: 0.14, name: '2-1 前摇·狮子奋迅过肩深拉' },
-          { act: 'combo2', p: 0.42, name: '2-2 劈完·240°崩地重砸满刀光' },
-          { act: 'combo2', p: 0.70, name: '2-3 剑嵌地不动·刀光收回一半' },
-          { act: 'combo2', p: 1.00, name: '2-4 收势·提柄重新扛回肩上' },
+          { act: 'combo1', p: 0.84, name: '1-4 收势·定格消散(松手直回待机)' },
+          // 二段：扭腰拧胯·千钧破阵平扫斩
+          { act: 'combo2', p: 0.14, name: '2-1 前摇·扭腰拧胯深蓄(-72°)' },
+          { act: 'combo2', p: 0.42, name: '2-2 劈完·千钧破阵3D平扫满光' },
+          { act: 'combo2', p: 0.70, name: '2-3 剑不动·平扫刀光收回一半' },
+          { act: 'combo2', p: 0.84, name: '2-4 收势·定格消散(松手直回待机)' },
+          // 三段：狮子奋迅·过肩蓄力崩地重砸
+          { act: 'combo3', p: 0.14, name: '3-1 前摇·狮子奋迅过肩深拉' },
+          { act: 'combo3', p: 0.42, name: '3-2 劈完·崩地重砸完整宽巨刃' },
+          { act: 'combo3', p: 0.70, name: '3-3 剑不动·崩地刀光收回一半' },
+          { act: 'combo3', p: 0.84, name: '3-4 收势·定格消散(松手直回待机)' },
+          // 四段：霸王风暴·360°重剑大回旋斩（带快速人物转身再转回）
+          { act: 'combo4', p: 0.14, name: '4-1 前摇·沉腰拧胯蓄满扭矩' },
+          { act: 'combo4', p: 0.28, name: '4-2 快速转身·巨刃反扫后背半圈' },
+          { act: 'combo4', p: 0.42, name: '4-3 转回正面·360°风暴满刀光' },
+          { act: 'combo4', p: 0.70, name: '4-4 剑不动·360°风暴环收一半' },
         ];
-        po = P.idleSide(i * 0.15, false);
-        weaponOpt = { id: 'greatsword', aim: 90, action: gsComboFrames[i].act, p: gsComboFrames[i].p };
-        labels.push(gsComboFrames[i].name);
+        const kf = gsComboFrames[i] || gsComboFrames[0];
+        po = P.idleSide(i * 0.12, false);
+        weaponOpt = { id: 'greatsword', aim: 90, action: kf.act, p: kf.p };
+        labels.push(kf.name);
       } else if (inspectMode === 'greatswordCleave') {
         const gsCleaveNames = [
           '1·前摇·双手过肩深拉(226°)',
           '2·前摇·后仰沉腰蓄力(238°)',
           '3·前摇·满蓄将发(246°)',
-          '4·劈完·崩地重砸满刀光(6°)',
-          '5·劈完·碎石震地满弧余威',
-          '6·剑嵌地不动·刀光收回一半',
-          '7·收势·双手拔剑上提',
-          '8·收势·重新扛回肩上(-132°)',
+          '4·劈完·崩地重砸满刀光(68°)',
+          '5·劈完·巨刃前伸完整不截断',
+          '6·剑定格不动·刀光收回一半',
+          '7·收势·余威渐敛稳住重心',
+          '8·收势·定格稳姿(松手直回待机)',
         ];
         po = P.idleSide(i * 0.15, false);
-        weaponOpt = { id: 'greatsword', aim: 90, action: 'combo2', p: (i + 0.5) / 8 };
+        weaponOpt = { id: 'greatsword', aim: 90, action: 'combo3', p: (i + 0.5) / 8 };
         labels.push(gsCleaveNames[i]);
+      } else if (inspectMode === 'greatswordWhirlwind') {
+        const gsWhirlNames = [
+          '1·前摇·沉腰压胯蓄力(-54°)',
+          '2·前摇·深拧后腰满扭矩(-82°)',
+          '3·快速转身·巨剑横掠后背半周',
+          '4·转回正面·360°大回旋满刀光',
+          '5·终结·前后双层飓风环激荡',
+          '6·剑定格不动·风暴环收一半',
+          '7·收势·旋风流线渐隐消散',
+          '8·收势·单手提柄扛回肩上',
+        ];
+        po = P.idleSide(i * 0.15, false);
+        weaponOpt = { id: 'greatsword', aim: 90, action: 'combo4', p: (i + 0.5) / 8 };
+        labels.push(gsWhirlNames[i]);
+      } else if (inspectMode === 'greatswordLionClaw' || (inspectMode === 'swordSkill' && inspectWeapon === 'greatsword')) {
+        const lionClawNames = [
+          '1-1 起跳拖剑(复用跳跃帧)',
+          '1-2 前空翻95°·剑轮横掠',
+          '1-3 前空翻195°·倒悬扬剑',
+          '1-4 空翻展开295°·擎天高举',
+          '1-5 第一斩·崩地满刀光(68°)',
+          '1-6 剑不动·第一斩刀光收半',
+          '2-1 借势二跃起(复用跳跃帧)',
+          '2-2 二轮空翻100°·剑轮横掠',
+          '2-3 二轮空翻205°·倒悬扬剑',
+          '2-4 空翻下落310°·擎天高举',
+          '2-5 第二斩·勇猛终结满光(62°)',
+          '2-6 第二斩·裂地重压停顿',
+          '2-7 剑不动·第二斩刀光收半',
+          '2-8 余威渐敛·碎光消隐',
+          '2-9 沉腕拔剑·收力起身',
+          '2-10 单手提柄·扛回肩上',
+        ];
+        po = P.idleSide(i * 0.1, false);
+        weaponOpt = { id: 'greatsword', aim: 90, action: 'skill', p: (i + 0.5) / 16 };
+        labels.push(lionClawNames[i] || `Frame ${i + 1}`);
       } else if (inspectMode === 'swordCombo') {
         const comboFrames = [
-          { act: 'combo1', p: 0.14, name: '一段1·背后深引' },
-          { act: 'combo1', p: 0.42, name: '一段2·环腰横斩' },
-          { act: 'combo1', p: 0.68, name: '一段3·横斩余势' },
-          { act: 'combo2', p: 0.14, name: '二段1·低垂引刃' },
-          { act: 'combo2', p: 0.56, name: '二段2·过顶大上挑' },
-          { act: 'combo3', p: 0.28, name: '三段1·举顶后仰36°' },
-          { act: 'combo3', p: 0.56, name: '三段2·满弧大下劈' },
-          { act: 'combo3', p: 0.70, name: '三段3·重劈震地' },
+          { act: 'combo1', p: 0.14, name: '1-1 背手引剑(-118°)' },
+          { act: 'combo1', p: 0.28, name: '1-2 疾风平斩满光(90°)' },
+          { act: 'combo1', p: 0.56, name: '1-3 剑不动·刀光收半' },
+          { act: 'combo1', p: 0.84, name: '1-4 收势衔接' },
+          { act: 'combo2', p: 0.14, name: '2-1 低垂引刃(-78°)' },
+          { act: 'combo2', p: 0.28, name: '2-2 掠月上挑满光(204°)' },
+          { act: 'combo2', p: 0.56, name: '2-3 剑不动·刀光收半' },
+          { act: 'combo2', p: 0.84, name: '2-4 高位衔接' },
+          { act: 'combo3', p: 0.28, name: '3-1 举顶后仰36°(216°)' },
+          { act: 'combo3', p: 0.42, name: '3-2 裂空下劈满光(24°)' },
+          { act: 'combo3', p: 0.70, name: '3-3 剑不动·刀光收半' },
+          { act: 'combo3', p: 0.88, name: '3-4 压腕蓄势' },
+          { act: 'combo4', p: 0.14, name: '4-1 肋下聚芒(88°)' },
+          { act: 'combo4', p: 0.28, name: '4-2 回风贯日刺满光' },
+          { act: 'combo4', p: 0.56, name: '4-3 剑不动·风环收半' },
+          { act: 'combo4', p: 0.90, name: '4-4 沉肘归位' },
         ];
-        po = P.idleSide(i * 0.15, false);
+        po = P.idleSide(i * 0.12, false);
         weaponOpt = { id: 'blade', aim: 90, action: comboFrames[i].act, p: comboFrames[i].p };
         labels.push(comboFrames[i].name);
       } else if (inspectMode === 'horizSlash') {
         const hzNames = [
           '1·背手引剑',
           '2·深拉蓄力(-118°)',
-          '3·环腰爆发(88°)',
-          '4·横斩极点(90°)',
-          '5·剑芒前刺(94°)',
-          '6·横斩余韵',
+          '3·疾风平斩满光(90°)',
+          '4·3D扁月牙极盛',
+          '5·剑不动·刀光收半',
+          '6·余韵渐消',
           '7·曲肘收锋',
           '8·沉肘归位',
         ];
@@ -951,52 +1031,113 @@ export default function App() {
         weaponOpt = { id: 'blade', aim: 90, action: 'combo1', p: (i + 0.5) / 8 };
         labels.push(hzNames[i]);
       } else if (inspectMode === 'swordSkill') {
-        const wid = inspectWeapon === 'katana' || inspectWeapon === 'greatsword' ? inspectWeapon : 'blade';
-        const skillNames =
-          wid === 'katana'
-            ? [
-                '1·鞘口吸引粒子(初)',
-                '2·粒子向鞘口聚拢',
-                '3·聚气压缩蓄满',
-                '4·聚集粒子爆发小星',
-                '5·独立层第1道环绕斩',
-                '6·独立层第2道环绕斩',
-                '7·独立层3道半周环绕',
-                '8·环绕刀光收回消散',
-              ]
-            : [
-                '1·撤腕引剑',
-                '2·屈肘归腰',
-                '3·凝神聚气',
-                '4·寒芒灌刃',
-                '5·挥臂拔剑',
-                '6·剑气离刃',
-                '7·刀光远掠',
-                '8·曲肘收剑',
-              ];
-        po = P.idleSide(i * 0.15, false);
-        weaponOpt = { id: wid, aim: 90, action: 'skill', p: (i + 0.5) / 8 };
-        labels.push(skillNames[i]);
+        const wid = inspectWeapon === 'katana' ? 'katana' : 'blade';
+        if (wid === 'katana') {
+          const katanaSkillNames = [
+            '1·鞘口吸引粒子(初)',
+            '2·粒子向鞘口聚拢',
+            '3·聚气压缩蓄满',
+            '4·聚集粒子爆发小星',
+            '5·独立层第1道环绕斩',
+            '6·独立层第2道环绕斩',
+            '7·独立层3道半周环绕',
+            '8·环绕刀光收回消散',
+          ];
+          po = P.idleSide(i * 0.15, false);
+          weaponOpt = { id: 'katana', aim: 90, action: 'skill', p: (i + 0.5) / 8 };
+          labels.push(katanaSkillNames[i]);
+        } else {
+          const flourishNames = [
+            '1·拈指立剑诀',
+            '2·沉腕蓄寒芒',
+            '3·第1道出现·斜上挽花',
+            '4·剑不动·第1道收半',
+            '5·第2道出现·反腕斜下掠',
+            '6·剑不动·第2道收半',
+            '7·旋身背挽·第3道起势(转身)',
+            '8·回身绽放·第3道环身满月',
+            '9·剑不动·第3道收半',
+            '10·撤剑聚星·蓄力终结',
+            '11·第4道出现·横剑定星(92°)',
+            '12·定星舒展·寒芒极盛',
+            '13·剑不动·第4道收半',
+            '14·剑不动·终结星芒渐隐',
+            '15·落指散余风',
+            '16·沉肘定式归位',
+          ];
+          po = P.idleSide(i * 0.1, false);
+          weaponOpt = { id: 'blade', aim: 90, action: 'skill', p: (i + 0.5) / 16 };
+          labels.push(flourishNames[i] || `Frame ${i + 1}`);
+        }
       } else if (inspectMode === 'bladeSwing') {
         const swNames = [
-          '1·承势提剑',
-          '2·高举过顶',
-          '3·后仰36°蓄势',
-          '4·凌空挥落',
-          '5·满弧下劈',
-          '6·碎石迸发',
-          '7·余势压刃',
+          '1·收剑归肋',
+          '2·寒芒聚尖(88°)',
+          '3·贯日突刺爆发(90°)',
+          '4·双层3D回风环极盛',
+          '5·剑不动·风环收半',
+          '6·螺旋余风消散',
+          '7·松腕缓势',
           '8·沉肘归位',
         ];
         po = P.idleSide(i * 0.2, false);
-        weaponOpt = { id: 'blade', aim: 90, action: 'combo3', p: (i + 0.5) / 8 };
+        weaponOpt = { id: 'blade', aim: 90, action: 'combo4', p: (i + 0.5) / 8 };
         labels.push(swNames[i]);
+      } else if (inspectMode === 'dualBladesCombo') {
+        const dbComboFrames = [
+          // 一段：鬼人突进·交替二连斜斩 (左劈与右挑依次出现)
+          { act: 'combo1', p: 0.14, name: '1-1 突进引双刃(左高右蓄)' },
+          { act: 'combo1', p: 0.28, name: '1-2 副手左刀斜劈满光' },
+          { act: 'combo1', p: 0.56, name: '1-3 主手右刀反挑满光' },
+          { act: 'combo1', p: 0.70, name: '1-4 刀不动·右挑刀光收半' },
+          // 二段：猎鹰反手·剪刀十字交叉斩 (法环双小曲 X 交叉双斩)
+          { act: 'combo2', p: 0.14, name: '2-1 展翼开刃蓄力(204°/-48°)' },
+          { act: 'combo2', p: 0.28, name: '2-2 剪刀X十字交叉满光' },
+          { act: 'combo2', p: 0.56, name: '2-3 双刀定格·十字光收半' },
+          { act: 'combo2', p: 0.84, name: '2-4 反手收锋衔接' },
+          // 三段：旋风陀螺·360°贴地双刃回旋斩 (怪猎陀螺回旋 + spinFlip)
+          { act: 'combo3', p: 0.14, name: '3-1 俯身压胯双刃蓄扭' },
+          { act: 'combo3', p: 0.28, name: '3-2 高速转身·陀螺扫背弧' },
+          { act: 'combo3', p: 0.42, name: '3-3 转回正面·360°双环满光' },
+          { act: 'combo3', p: 0.56, name: '3-4 双刀定格·陀螺环收半' },
+          // 四段：飞身双翼·腾空十字撕裂重斩 (轻跃展翼→俯冲双弧撕裂)
+          { act: 'combo4', p: 0.14, name: '4-1 轻跃腾空·猎鹰展双翼' },
+          { act: 'combo4', p: 0.28, name: '4-2 凌空滞空·高举双曲剑' },
+          { act: 'combo4', p: 0.42, name: '4-3 俯冲落地·双翼撕裂满光' },
+          { act: 'combo4', p: 0.70, name: '4-4 双刀定格·撕裂光收半' },
+        ];
+        const kf = dbComboFrames[i] || dbComboFrames[0];
+        po = P.idleSide(i * 0.12, false);
+        weaponOpt = { id: 'dualBlades', aim: 90, action: kf.act, p: kf.p };
+        labels.push(kf.name);
+      } else if (inspectMode === 'dualBladesSkill' || (inspectMode === 'swordSkill' && inspectWeapon === 'dualBlades')) {
+        const danceNames = [
+          '1·胸前十字交刃起势',
+          '2·鬼人压步开刃满蓄',
+          '3·第1斩出现·右刀斜劈',
+          '4·刀不动·第1斩收半',
+          '5·第2斩出现·左刀反挑',
+          '6·刀不动·第2斩收半',
+          '7·第3斩出现·右刀贴地扫',
+          '8·刀不动·第3斩收半',
+          '9·第4斩出现·旋身回环(转身)',
+          '10·回身收半·展翼高举蓄终结',
+          '11·终结斩·双刃十字裂空满光',
+          '12·十字裂空·交点爆星极盛',
+          '13·双刀定格·十字刀光收半',
+          '14·双刀定格·寒芒余韵渐散',
+          '15·振腕甩刃散寒风',
+          '16·鬼人反手戒备归位',
+        ];
+        po = P.idleSide(i * 0.1, false);
+        weaponOpt = { id: 'dualBlades', aim: 90, action: 'skill', p: (i + 0.5) / 16 };
+        labels.push(danceNames[i] || `Frame ${i + 1}`);
       } else if (inspectMode === 'pistolAim') {
         const aims = [0, 45, 90, 135, 180, -135, -90, -45];
         const aimNames = ['0° 朝下', '45° 右下', '90° 正前', '135° 右上', '180° 正上', '-135° 背上', '-90° 背后', '-45° 背下'];
         po = P.idleSide(i * 0.2, false);
         const wid = inspectWeapon === 'none' ? 'pistol' : inspectWeapon;
-        const isMelee = wid === 'blade' || wid === 'katana' || wid === 'greatsword';
+        const isMelee = wid === 'blade' || wid === 'dualBlades' || wid === 'katana' || wid === 'greatsword';
         weaponOpt = {
           id: wid,
           aim: aims[i],
@@ -1033,7 +1174,7 @@ export default function App() {
           up = [2, 4, 3, 1][i - 4];
         }
         const wid = inspectWeapon === 'none' ? 'pistol' : inspectWeapon;
-        const isMelee = wid === 'blade' || wid === 'katana' || wid === 'greatsword';
+        const isMelee = wid === 'blade' || wid === 'dualBlades' || wid === 'katana' || wid === 'greatsword';
         weaponOpt = { id: wid, aim: aims[i], action: i === 2 || i === 5 ? (isMelee ? 'combo1' : 'shoot') : 'aim', p: isMelee ? 0.42 : 0.18 };
         labels.push(locoNames[i]);
       } else if (inspectMode === 'idle') {
@@ -1094,14 +1235,14 @@ export default function App() {
       });
 
       ctx.fillStyle = '#8b909c';
-      ctx.fillRect(0, 0, 72, 56);
+      ctx.fillRect(0, 0, 96, 76);
       ctx.fillStyle = '#5c606b';
-      ctx.fillRect(0, 51, 72, 5);
+      ctx.fillRect(0, 56, 96, 20);
 
-      const inspColOff = (Rig.GX || 4) - 16; // Centers hip (16 + GX) at c = 32 inside 72px wide canvas
-      for (let r = 0; r < 56; r++) {
-        for (let c = 0; c < 72; c++) {
-          const gr = r + 23 + up;
+      const inspColOff = (Rig.GX || 28) - 26; // Centers hip (16 + GX) at c = 42 inside 96px wide canvas
+      for (let r = 0; r < 76; r++) {
+        for (let c = 0; c < 96; c++) {
+          const gr = r + 20 + up;
           const gc = c + inspColOff;
           if (gr >= 0 && gr < Rig.GH && gc >= 0 && gc < Rig.GW) {
             const col = g[gr]?.[gc];
@@ -1112,25 +1253,19 @@ export default function App() {
           }
         }
       }
-      // In swordSkill frames 5..6 (except katana which uses stationary triple vertical crescents), draw the flying pure-white crescent sword wave in the 72x56 preview tile
-      if (inspectMode === 'swordSkill' && weaponOpt?.id !== 'katana' && (i === 5 || i === 6)) {
-        const wx = i === 5 ? 46 : 53;
-        for (let dy = -6; dy <= 6; dy++) {
-          const curve = Math.round((1 - (dy * dy) / 36) * 3);
-          ctx.fillStyle = '#eef1f6';
-          ctx.fillRect(wx + curve, 37 + dy, 1, 1);
-          ctx.fillStyle = Math.abs(dy) <= 3 ? '#eef1f6' : '#dce1eb';
-          ctx.fillRect(wx + curve - 1, 37 + dy, 1, 1);
-        }
-      }
     }
     setInspectFrameLabels(labels);
 
-    // Render 5-panel Starbound Layer Split Preview (backArm, body, weapon, frontArm, composite)
+    // Render 6-panel Starbound Layer Split Preview (backArm, body, weapon, frontArm, detachedFX, composite)
     const sampleWid =
-      inspectMode === 'katanaCombo' || inspectMode === 'katanaIai'
+      inspectMode === 'dualBladesCombo' || inspectMode === 'dualBladesSkill'
+        ? 'dualBlades'
+        : inspectMode === 'katanaCombo' || inspectMode === 'katanaIai'
         ? 'katana'
-        : inspectMode === 'greatswordCombo' || inspectMode === 'greatswordCleave'
+        : inspectMode === 'greatswordCombo' ||
+          inspectMode === 'greatswordCleave' ||
+          inspectMode === 'greatswordWhirlwind' ||
+          inspectMode === 'greatswordLionClaw'
         ? 'greatsword'
         : inspectMode === 'swordCombo' || inspectMode === 'horizSlash' || inspectMode === 'bladeSwing'
         ? 'blade'
@@ -1154,14 +1289,16 @@ export default function App() {
       ? 'aim'
       : inspectMode === 'pistolReload'
       ? 'reload'
-      : inspectMode === 'swordSkill' || inspectMode === 'katanaIai'
+      : inspectMode === 'swordSkill' ||
+        inspectMode === 'katanaIai' ||
+        inspectMode === 'greatswordLionClaw' ||
+        inspectMode === 'dualBladesSkill'
       ? 'skill'
-      : inspectMode === 'bladeSwing'
+      : inspectMode === 'greatswordCleave' || inspectMode === 'dualBladesCombo' || sampleWid === 'dualBlades'
       ? 'combo3'
-      : inspectMode === 'greatswordCleave'
-      ? 'combo2'
+      : inspectMode === 'bladeSwing' || inspectMode === 'greatswordWhirlwind' || inspectMode === 'greatswordCombo'
+      ? 'combo4'
       : inspectMode === 'katanaCombo' ||
-        inspectMode === 'greatswordCombo' ||
         inspectMode === 'swordCombo' ||
         inspectMode === 'horizSlash' ||
         sampleWid === 'blade' ||
@@ -1169,16 +1306,26 @@ export default function App() {
         sampleWid === 'greatsword'
       ? 'combo1'
       : 'shoot';
-     const sampleP = isIdle45Sample
+    const sampleP = isIdle45Sample
       ? 0.38
       : sampleAct === 'reload'
       ? 0.36
       : sampleAct === 'skill'
-      ? 0.62
+      ? sampleWid === 'greatsword'
+        ? 0.64
+        : sampleWid === 'dualBlades'
+        ? 0.65
+        : sampleWid === 'blade'
+        ? 0.65
+        : 0.62
+      : sampleWid === 'dualBlades' && sampleAct === 'combo3'
+      ? 0.42
+      : sampleWid === 'greatsword' && sampleAct.startsWith('combo')
+      ? 0.42
+      : sampleAct === 'combo4'
+      ? 0.36
       : sampleAct === 'combo3'
       ? 0.56
-      : sampleWid === 'greatsword' && (sampleAct === 'combo1' || sampleAct === 'combo2')
-      ? 0.42
       : sampleAct === 'combo1'
       ? 0.28
       : 0.16;
@@ -1204,19 +1351,19 @@ export default function App() {
       layers.detachedFX || layers.weapon,
       layers.composite,
     ];
-    const inspColOff = (Rig.GX || 4) - 16;
+    const inspColOff = (Rig.GX || 28) - 26;
     grids.forEach((grid: any, idx: number) => {
       const lcv = layerCanvasRefs.current[idx];
       if (!lcv) return;
       const lctx = lcv.getContext('2d');
       if (!lctx) return;
       lctx.fillStyle = '#8b909c';
-      lctx.fillRect(0, 0, 72, 56);
+      lctx.fillRect(0, 0, 96, 76);
       lctx.fillStyle = '#5c606b';
-      lctx.fillRect(0, 51, 72, 5);
-      for (let r = 0; r < 56; r++) {
-        for (let c = 0; c < 72; c++) {
-          const gr = r + 23;
+      lctx.fillRect(0, 56, 96, 20);
+      for (let r = 0; r < 76; r++) {
+        for (let c = 0; c < 96; c++) {
+          const gr = r + 20;
           const gc = c + inspColOff;
           if (gr >= 0 && gr < Rig.GH && gc >= 0 && gc < Rig.GW && grid[gr]?.[gc]) {
             lctx.fillStyle = grid[gr][gc];
@@ -1650,6 +1797,20 @@ export default function App() {
               x: e.x - f * 2 + Math.cos(ang) * 4,
               y: e.y - 15 + Math.sin(ang) * 4,
               vy: -14 - Math.random() * 18,
+              age: 0.04,
+              steel: true,
+            });
+          }
+        } else if (e.type === 'swordFlourish' || e.type === 'demonDance') {
+          const isClimax = e.type === 'demonDance' ? e.stage >= 5 : !e.stage || e.stage >= 4;
+          sfx.play(isClimax ? 'wave' : 'swing');
+          if (isClimax) rings.push({ x: e.x, y: e.y, age: 0.02, steel: true });
+          const sparkCount = isClimax ? 12 : 5;
+          for (let i = 0; i < sparkCount; i++) {
+            sparks.push({
+              x: e.x + (Math.random() * 14 - 7),
+              y: e.y + (Math.random() * 12 - 6),
+              vy: -16 - Math.random() * 20,
               age: 0.04,
               steel: true,
             });
@@ -2878,19 +3039,33 @@ export default function App() {
   const weaponLabel =
     selectedWeapon === 'pistol'
       ? '脉冲手枪'
+      : selectedWeapon === 'dualBlades'
+      ? '铁质双刀 (猎鹰双曲剑·4连+鬼人乱舞)'
       : selectedWeapon === 'katana'
       ? '铁质长刀 (刀模组·4连)'
       : selectedWeapon === 'greatsword'
-      ? '铁质大剑 (肩扛巨剑·2连)'
+      ? '铁质大剑 (肩扛巨剑·4连大回旋)'
       : selectedWeapon === 'blade'
-      ? '铁质长剑 (剑模组·3连)'
+      ? '铁质长剑 (修长直剑·4连+千瓣剑花)'
       : '无 (空手)';
   const comboStepLabels =
-    selectedWeapon === 'katana'
+    selectedWeapon === 'dualBlades'
+      ? [
+          '一段·鬼人突进·交替二连斜斩',
+          '二段·猎鹰反手·剪刀十字交叉斩',
+          '三段·旋风陀螺·360°双刃回旋斩',
+          '四段·飞身双翼·腾空十字撕裂斩',
+        ]
+      : selectedWeapon === 'katana'
       ? ['一段·拔刀向前横扫(3D扁月牙)', '二段·极速反手斜上挑', '三段·极速正手斜下劈', '四段·大上段重下劈']
       : selectedWeapon === 'greatsword'
-      ? ['一段·拖地狂风上撩斩', '二段·狮子奋迅崩地重砸']
-      : ['一段·向前横斩', '二段·过顶上挑', '三段·举顶后仰下劈'];
+      ? [
+          '一段·拖地狂风上撩斩',
+          '二段·扭腰千钧平扫斩',
+          '三段·狮子奋迅崩地重砸',
+          '四段·霸王风暴360°大回旋斩',
+        ]
+      : ['一段·疾风平斩', '二段·掠月斜上挑', '三段·裂空斜下劈', '四段·回风贯日刺'];
   const comboModulo = comboStepLabels.length;
   const currentComboLabel =
     comboStepLabels[
@@ -3005,9 +3180,10 @@ export default function App() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1 bg-[#181b20] p-1 rounded-md border border-[#343841]">
                 {[
-                  { id: 'blade', label: '铁质长剑(3连)' },
+                  { id: 'blade', label: '铁质长剑(4连·剑花)' },
+                  { id: 'dualBlades', label: '铁质双刀(4连·乱舞)' },
                   { id: 'katana', label: '铁质长刀(4连)' },
-                  { id: 'greatsword', label: '铁质大剑(2连·肩扛)' },
+                  { id: 'greatsword', label: '铁质大剑(4连·回旋)' },
                   { id: 'pistol', label: '脉冲手枪' },
                   { id: null, label: '空手' },
                 ].map((wItem) => (
@@ -3043,9 +3219,12 @@ export default function App() {
               <button
                 type="button"
                 data-testid="stage-attack-btn"
-                onClick={handleTriggerShoot}
+                onClick={(e) => {
+                  if (e.detail === 0) handleTriggerShoot();
+                }}
                 onPointerDown={() => {
                   attackHoldRef.current = true;
+                  handleTriggerShoot();
                 }}
                 onPointerUp={() => {
                   attackHoldRef.current = false;
@@ -3055,21 +3234,30 @@ export default function App() {
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border bg-[#ef7b3a] border-[#ff9b61] text-[#14161a] hover:bg-[#ff8f52] transition-colors whitespace-nowrap shrink-0"
               >
-                {selectedWeapon === 'katana'
+                {selectedWeapon === 'dualBlades'
+                  ? `双刀四连斩：${currentComboLabel} (F / 左键)`
+                  : selectedWeapon === 'katana'
                   ? `长刀四连击：${currentComboLabel} (F / 左键)`
                   : selectedWeapon === 'greatsword'
-                  ? `大剑二连重击：${currentComboLabel} (F / 左键)`
+                  ? `大剑四连重击：${currentComboLabel} (F / 左键)`
                   : selectedWeapon === 'blade'
-                  ? `长剑三连击：${currentComboLabel} (F / 左键)`
+                  ? `长剑四连击：${currentComboLabel} (F / 左键)`
                   : `开枪射击 (${ammoDisplay.ammo}/${ammoDisplay.max}) (F / 左键)`}
               </button>
 
               <button
                 type="button"
+                data-testid="stage-skill-btn"
                 onClick={handleTriggerSkill}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border bg-[#2b303a] border-[#9aa1b0] text-[#eef1f6] hover:bg-[#373d4a] transition-colors whitespace-nowrap shrink-0"
               >
-                蓄力剑气 (G / 右键)
+                {selectedWeapon === 'dualBlades'
+                  ? '秘技·鬼人乱舞 (G / 右键)'
+                  : selectedWeapon === 'greatsword'
+                  ? '战技·勇猛狮子斩 (G / 右键)'
+                  : selectedWeapon === 'katana'
+                  ? '秘技·星爆三连环斩 (G / 右键)'
+                  : '秘技·流云连环剑花 (G / 右键)'}
               </button>
 
               <button
@@ -3159,9 +3347,23 @@ export default function App() {
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#9aa1ae] px-1">
             <div>
               <kbd className="bg-[#232730] border border-[#3a3f4b] rounded px-1.5 py-0.5 text-[#d8dce6]">按住左键 / F</kbd>{' '}
-              铁剑三段八帧连招（一段向前横斩 → 二段过顶上挑 → 三段举顶后仰30°下劈，未衔接自动归第一段） ·{' '}
+              {selectedWeapon === 'dualBlades'
+                ? '铁质双刀四段双持连斩（鬼人交替二连 → 猎鹰剪刀十字斩 → 360°旋风陀螺回旋 → 飞身双翼撕裂，出招锁定朝向·招式间隙可转向）'
+                : selectedWeapon === 'greatsword'
+                ? '铁质大剑四段重连击（拖地上撩 → 扭腰平扫 → 狮子奋迅 → 转身360°大回旋斩，出招锁定朝向·招式间隙可转向）'
+                : selectedWeapon === 'katana'
+                ? '铁质长刀四段连斩（拔刀横扫 → 反手上挑 → 正手下劈 → 大上段终结，出招锁定朝向·招式间隙可转向）'
+                : '修长铁质长剑四段连招（疾风平斩 → 掠月上挑 → 裂空下劈 → 回风贯日刺，出招序列帧锁定朝向·招式间隙可转向）'}{' '}
+              ·{' '}
               <kbd className="bg-[#232730] border border-[#3a3f4b] rounded px-1.5 py-0.5 text-[#d8dce6]">右键 / G</kbd>{' '}
-              蓄力冷铁剑气 ·{' '}
+              {selectedWeapon === 'dualBlades'
+                ? '秘技·鬼人乱舞（交刃蓄势 + 四道疾风连斩依次出现 + 终结双翼十字裂空五连击）'
+                : selectedWeapon === 'greatsword'
+                ? '战技·勇猛狮子斩（跃起360°前空翻连斩两次）'
+                : selectedWeapon === 'katana'
+                ? '秘技·星爆三连环斩（独立层环绕刀光）'
+                : '秘技·流云连环剑花（四道3D剑花依次出现+旋身定星）'}{' '}
+              ·{' '}
               <kbd className="bg-[#232730] border border-[#3a3f4b] rounded px-1.5 py-0.5 text-[#d8dce6]">M</kbd>{' '}
               召唤练功木桩测试打击感
             </div>
@@ -4664,10 +4866,10 @@ export default function App() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-[#f0f2f6]">
-                03. 铁质长刀(4连)/铁质巨剑(2连·肩扛)/铁质长剑(3连) 纯白刀光与全动作检视（当前角色：{activeInspectSpec?.name}）
+                03. 铁质长剑(4连·千瓣剑花)/铁质长刀(4连)/铁质大剑(4连·肩扛回旋) 纯白3D刀光与全动作检视（当前角色：{activeInspectSpec?.name}）
               </h2>
               <p className="text-xs text-[#9aa1ae] mt-0.5">
-                手臂与武器围绕肩膀支点独立解耦并与躯干联动；所有随机生成的人类/异星 NPC 均可直接拿起铁质长刀、肩扛铁质大剑或铁质长剑打出完整连段
+                手臂与武器围绕肩膀支点独立解耦，出招序列帧内严格锁定朝向、招式间隙自由随鼠标转向；所有随机人类/异星 NPC 均可直接执武打出完整四连与专属战技
               </p>
             </div>
 
@@ -4699,12 +4901,13 @@ export default function App() {
               </div>
 
               {/* Weapon Picker in Inspector */}
-              <div className="flex items-center gap-1 bg-[#14161a] p-1 rounded-lg border border-[#2a2e37]">
+              <div className="flex flex-wrap items-center gap-1 bg-[#14161a] p-1 rounded-lg border border-[#2a2e37]">
                 {[
                   { id: 'none', label: '空手' },
+                  { id: 'dualBlades', label: '铁质双刀 (双曲剑·4连+鬼人乱舞)' },
                   { id: 'katana', label: '铁质长刀 (刀模组·4连)' },
-                  { id: 'greatsword', label: '铁质大剑 (肩扛巨剑·2连)' },
-                  { id: 'blade', label: '铁质长剑 (剑模组·3连)' },
+                  { id: 'greatsword', label: '铁质大剑 (肩扛巨剑·4连)' },
+                  { id: 'blade', label: '铁质长剑 (修长直剑·4连+剑花)' },
                   { id: 'pistol', label: '脉冲手枪' },
                 ].map((w) => (
                   <button
@@ -4713,11 +4916,13 @@ export default function App() {
                     data-testid={`inspector-weapon-${w.id}`}
                     onClick={() => {
                       setInspectWeapon(w.id);
-                      if (w.id === 'katana' && ['swordCombo', 'greatswordCombo', 'greatswordCleave'].includes(inspectMode)) {
+                      if (w.id === 'dualBlades' && ['swordCombo', 'horizSlash', 'swordSkill', 'bladeSwing', 'katanaCombo', 'katanaIai', 'greatswordCombo', 'greatswordCleave', 'greatswordWhirlwind', 'greatswordLionClaw'].includes(inspectMode)) {
+                        setInspectMode('dualBladesCombo');
+                      } else if (w.id === 'katana' && ['swordCombo', 'dualBladesCombo', 'dualBladesSkill', 'greatswordCombo', 'greatswordCleave', 'greatswordWhirlwind', 'greatswordLionClaw'].includes(inspectMode)) {
                         setInspectMode('katanaCombo');
-                      } else if (w.id === 'greatsword' && ['swordCombo', 'katanaCombo', 'katanaIai'].includes(inspectMode)) {
+                      } else if (w.id === 'greatsword' && ['swordCombo', 'dualBladesCombo', 'dualBladesSkill', 'katanaCombo', 'katanaIai'].includes(inspectMode)) {
                         setInspectMode('greatswordCombo');
-                      } else if (w.id === 'blade' && ['katanaCombo', 'katanaIai', 'greatswordCombo', 'greatswordCleave'].includes(inspectMode)) {
+                      } else if (w.id === 'blade' && ['dualBladesCombo', 'dualBladesSkill', 'katanaCombo', 'katanaIai', 'greatswordCombo', 'greatswordCleave', 'greatswordWhirlwind', 'greatswordLionClaw'].includes(inspectMode)) {
                         setInspectMode('swordCombo');
                       }
                     }}
@@ -4757,8 +4962,9 @@ export default function App() {
                 data-testid={`action-${m.id}`}
                 onClick={() => {
                   setInspectMode(m.id);
-                  if (m.id === 'katanaCombo' || m.id === 'katanaIai') setInspectWeapon('katana');
-                  else if (m.id === 'greatswordCombo' || m.id === 'greatswordCleave') setInspectWeapon('greatsword');
+                  if (m.id === 'dualBladesCombo' || m.id === 'dualBladesSkill') setInspectWeapon('dualBlades');
+                  else if (m.id === 'katanaCombo' || m.id === 'katanaIai') setInspectWeapon('katana');
+                  else if (m.id === 'greatswordCombo' || m.id === 'greatswordCleave' || m.id === 'greatswordWhirlwind' || m.id === 'greatswordLionClaw') setInspectWeapon('greatsword');
                   else if (m.id === 'swordCombo' || m.id === 'horizSlash' || m.id === 'swordSkill' || m.id === 'bladeSwing') setInspectWeapon('blade');
                 }}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
@@ -4849,13 +5055,13 @@ export default function App() {
                 key={i}
                 className="bg-[#232730] border border-[#343946] rounded-md p-2 flex flex-col items-center gap-1.5"
               >
-                <div className="w-full aspect-[9/7] bg-[#8b909c] rounded overflow-hidden">
+                <div className="w-full aspect-[24/19] bg-[#8b909c] rounded overflow-hidden">
                   <canvas
                     ref={(el) => {
                       inspectorCanvasRefs.current[i] = el;
                     }}
-                    width={72}
-                    height={56}
+                    width={96}
+                    height={76}
                     className="w-full h-full block pixelated"
                   />
                 </div>
@@ -4870,15 +5076,15 @@ export default function App() {
           <div className="bg-[#14161a] border border-[#2a2e37] rounded-lg p-3.5 flex flex-col gap-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-semibold text-[#e3e9f1]">
-                独立手臂、铁质武器与脱离角色独立刀气层六层剥离预览（72×56 超宽画布 · 当前角色：{activeInspectSpec?.name} · 武器：{inspectWeapon === 'katana' ? '铁质长刀(4连)' : inspectWeapon === 'greatsword' ? '铁质大剑(2连·肩扛)' : inspectWeapon === 'blade' ? '铁质长剑(3连)' : inspectWeapon === 'pistol' ? '脉冲手枪' : '空手'}）
+                独立手臂、铁质武器与脱离角色独立刀气层六层剥离预览（96×76 扩容防截断画布 · 当前角色：{activeInspectSpec?.name} · 武器：{inspectWeapon === 'dualBlades' ? '铁质双刀(双曲剑·4连+鬼人乱舞)' : inspectWeapon === 'katana' ? '铁质长刀(4连)' : inspectWeapon === 'greatsword' ? '铁质大剑(4连·360°大回旋)' : inspectWeapon === 'blade' ? '铁质长剑(4连·连环剑花)' : inspectWeapon === 'pistol' ? '脉冲手枪' : '空手'}）
               </span>
               <span className="text-[11px] text-[#9aa1ae]">
-                绘制顺序：1. 后臂层 (backArm) → 2. 躯干腿部层 (body) → 3. 武器与3D刀光层 (weapon) → 4. 前臂层 (frontArm) → 5. 独立世界刀气层 (detachedFX·不随人动) ＝ 6. 最终合成
+                绘制顺序：1. 后臂与回旋后弧层 (backArm) → 2. 躯干腿部层 (body) → 3. 武器与3D刀光层 (weapon) → 4. 前臂层 (frontArm) → 5. 独立世界刀气层 (detachedFX) ＝ 6. 最终合成
               </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
               {[
-                '1. 后臂层 (backArm)',
+                '1. 后臂/回旋后弧 (backArm)',
                 '2. 躯干与腿部联动 (body)',
                 '3. 铁质武器与3D刀光 (weapon)',
                 '4. 前臂握持层 (frontArm)',
@@ -4889,13 +5095,13 @@ export default function App() {
                   key={title}
                   className="bg-[#20242c] border border-[#323744] rounded-md p-2 flex flex-col items-center gap-1.5"
                 >
-                  <div className="w-36 h-[112px] bg-[#8b909c] rounded overflow-hidden">
+                  <div className="w-40 h-[126px] bg-[#8b909c] rounded overflow-hidden">
                     <canvas
                       ref={(el) => {
                         layerCanvasRefs.current[idx] = el;
                       }}
-                      width={72}
-                      height={56}
+                      width={96}
+                      height={76}
                       className="w-full h-full block pixelated"
                     />
                   </div>

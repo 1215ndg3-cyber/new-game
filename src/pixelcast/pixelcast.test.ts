@@ -115,7 +115,7 @@ test('Normal double-jump somersault (flip) curls into a compact ball at airborne
     assert.equal(hy, 35, `Expected somersault step ${i} to stay at airborne height hy=35 (no floor teleport), got ${hy}`);
     phis.push(f.phi);
     const g = Rig.charGrid(xing, f.po, hy, f.phi);
-    let minR = 80, maxR = -1, minC = 32, maxC = -1;
+    let minR = Rig.GH, maxR = -1, minC = Rig.GW, maxC = -1;
     for (let r = 0; r < Rig.GH; r++) {
       for (let c = 0; c < Rig.GW; c++) {
         if (g[r][c]) {
@@ -198,7 +198,7 @@ test('AI simulation runs 6 agents including blink, sprint, and suit toggle witho
       assert.ok(Number.isFinite(a.x) && Number.isFinite(a.y), `Agent ${a.id} position must be finite`);
       const fp = AI.framePose(a);
       const g = Rig.charGrid(a.spec, fp.po, fp.hy, fp.phi, { suit: fp.suit, flame: fp.flame, weapon: fp.weapon });
-      assert.ok(g && g.length === 80);
+      assert.ok(g && g.length === Rig.GH);
     }
   }
 });
@@ -286,23 +286,23 @@ test('Pistol shoot and 4-stage reload animations & armed run/jump/flip rules wor
   assert.equal(xing.ammo, 6, 'Expected ammo to refill to 6 after reload finishes');
 });
 
-test('Sword module 3-hit stepped 8-frame upper-body-only combo (horiz -> overhead diagUp -> 30-deg backward-tilted heavySlam) and charged sword wave skill work across all characters', () => {
+test('Sword module 4-hit stepped 8-frame upper-body-only combo (swordHoriz3D -> swordUp3D -> swordCleave3D -> swordThrust3D) and 16-frame 3D Sword Flourish skill work across all characters', () => {
   (globalThis as any).PixelRig = Rig;
   (globalThis as any).PixelCast = Cast;
   const w = AI.createWorld(11);
   const xing = w.agents[5];
   w.setWeapon(xing, 'blade');
   assert.equal(xing.weapon, 'blade');
-  assert.equal(Rig.WEAPONS.blade.comboCount, 3, 'Expected 3-stage sword combo');
+  assert.equal(Rig.WEAPONS.blade.comboCount, 4, 'Expected 4-stage sword combo');
 
-  // Verify 3-combo sequence progression via swing(xing, forceStep)
-  const expectedSlashTypes = ['horiz', 'diagUp', 'heavySlam'];
-  for (let s = 0; s < 3; s++) {
+  // Verify 4-combo sequence progression via swing(xing, forceStep)
+  const expectedSlashTypes = ['swordHoriz3D', 'swordUp3D', 'swordCleave3D', 'swordThrust3D'];
+  for (let s = 0; s < 4; s++) {
     const act = w.swing(xing, s);
     assert.equal(act, `combo${s + 1}`, `Expected combo step ${s + 1}`);
     const wpMid = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: act, p: 0.44 });
     assert.equal(wpMid.slashType, expectedSlashTypes[s], `Expected slashType ${expectedSlashTypes[s]} for ${act}`);
-    if (s >= 1) {
+    if (s === 1 || s === 2) {
       assert.equal(wpMid.twoHand, true, `Expected two-handed power grip on ${act}`);
     }
     // Check UPPER-BODY-ONLY skeletal participation: legs (nl, fl) and hopY=0 are preserved from basePo!
@@ -320,15 +320,15 @@ test('Sword module 3-hit stepped 8-frame upper-body-only combo (horiz -> overhea
     );
 
     if (s === 0) {
-      // 1st hit (一段·向前横斩) cocks deep behind the back (-118°) and sweeps >200° horizontally forward (90°)
+      // 1st hit (一段·疾风平斩) cocks deep behind the back (-118°) and sweeps >200° horizontally forward (90°)
       const wpWind1 = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo1', p: 0.14 });
       assert.equal(wpWind1.gunAng, -118, `Expected 1st hit windup to cock sword deep behind the back (-118°), got ${wpWind1.gunAng}°`);
       const wpSlash1 = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo1', p: 0.42 });
       assert.equal(wpSlash1.gunAng, 90, `Expected 1st hit forward horizontal slash peak to align horizontally forward (90°), got ${wpSlash1.gunAng}°`);
       assert.ok(wpSlash1.gunAng - wpSlash1.trailFrom >= 195, `Expected >195° horizontal slash sweep on combo1, got ${wpSlash1.gunAng - wpSlash1.trailFrom}°`);
-      assert.equal(wpSlash1.slashType, 'horiz');
+      assert.equal(wpSlash1.slashType, 'swordHoriz3D');
 
-      // Verify reference-matched horiz trail wraps behind the character's back AND extends a sharp horizontal tip in front
+      // Verify 3D swordHoriz3D trail wraps behind the character's back (backArm + weapon) AND extends a sharp horizontal needle tip in front of the 17.5px sword tip
       const P = Rig.poser(xing.spec);
       const po = P.idleSide(0, false);
       const layers1: any = Rig.charLayers(xing.spec, po, P.hyGround(po), 0, {
@@ -337,7 +337,9 @@ test('Sword module 3-hit stepped 8-frame upper-body-only combo (horiz -> overhea
       const trailCols1: number[] = [];
       for (let r = 0; r < Rig.GH; r++) {
         for (let c = 0; c < Rig.GW; c++) {
-          if (layers1.weapon[r][c] === '#eef1f6' || layers1.weapon[r][c] === '#9aa1b0') {
+          const wCol = layers1.weapon[r][c];
+          const bCol = layers1.backArm[r][c];
+          if (wCol === '#eef1f6' || wCol === '#9aa1b0' || bCol === '#eef1f6' || bCol === '#9aa1b0') {
             trailCols1.push(c);
           }
         }
@@ -345,26 +347,33 @@ test('Sword module 3-hit stepped 8-frame upper-body-only combo (horiz -> overhea
       const minTrailCol = Math.min(...trailCols1);
       const maxTrailCol = Math.max(...trailCols1);
       const shoulderGridCol = layers1.shoulder.x + Rig.GX;
-      assert.ok(minTrailCol <= shoulderGridCol - 7, `Expected horiz C-crescent trail to wrap behind character's back (<= ${shoulderGridCol - 7}), got minCol=${minTrailCol}`);
-      assert.ok(maxTrailCol >= layers1.muzzle.x + Rig.GX + 4, `Expected horiz needle tip to extend past sword tip (>= ${layers1.muzzle.x + Rig.GX + 4}), got maxCol=${maxTrailCol}`);
+      assert.ok(minTrailCol <= shoulderGridCol - 7, `Expected swordHoriz3D 3D crescent trail to wrap behind character's back (<= ${shoulderGridCol - 7}), got minCol=${minTrailCol}`);
+      assert.ok(maxTrailCol >= layers1.muzzle.x + Rig.GX + 4, `Expected swordHoriz3D needle tip to extend past lengthened 17.5px sword tip (>= ${layers1.muzzle.x + Rig.GX + 4}), got maxCol=${maxTrailCol}`);
     }
 
     if (s === 1) {
-      // 2nd hit (二段·过顶上挑) sweeps >200° past vertical crown (reaching 204°)
-      const wpUpPeak = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo2', p: 0.56 });
+      // 2nd hit (二段·掠月斜上挑) sweeps >200° past vertical crown (reaching 204°)
+      const wpUpPeak = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo2', p: 0.42 });
       assert.ok(wpUpPeak.gunAng >= 200, `Expected 2nd hit upward slash to sweep high past overhead crown (>=200°), got ${wpUpPeak.gunAng}°`);
       assert.ok(wpUpPeak.gunAng - wpUpPeak.trailFrom >= 185, `Expected >185° single-frame trajectory trail on combo2, got span=${wpUpPeak.gunAng - wpUpPeak.trailFrom}°`);
     }
 
     if (s === 2) {
-      // 3rd hit (三段·举顶后仰下劈) raises sword overhead tilted 36° backward (180° + 36° = 216°) and cleaves >190° down to 20°
+      // 3rd hit (三段·裂空斜下劈) raises sword overhead tilted 36° backward (180° + 36° = 216°) and cleaves >190° down to 24°
       const wpWindup = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo3', p: 0.30 });
-      assert.equal(wpWindup.gunAng, 216, `Expected 3rd hit heavySlam windup to tilt 36° backward past vertical overhead (216°), got ${wpWindup.gunAng}°`);
+      assert.equal(wpWindup.gunAng, 216, `Expected 3rd hit swordCleave3D windup to tilt 36° backward past vertical overhead (216°), got ${wpWindup.gunAng}°`);
       const wpImpact = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo3', p: 0.56 });
-      assert.ok(wpImpact.gunAng <= 24, `Expected 3rd hit heavySlam to cleave all the way down (<=24°), got ${wpImpact.gunAng}°`);
+      assert.ok(wpImpact.gunAng <= 24, `Expected 3rd hit swordCleave3D to cleave all the way down (<=24°), got ${wpImpact.gunAng}°`);
       assert.ok(wpImpact.trailFrom - wpImpact.gunAng >= 190, `Expected >190° full overhead-to-ground slash trail, got ${wpImpact.trailFrom - wpImpact.gunAng}°`);
       const wpBurst = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo3', p: 0.68 });
-      assert.ok(wpBurst.slamBurst > 0, 'Expected 3rd hit heavySlam to trigger ground shockwave slamBurst at impact');
+      assert.ok(wpBurst.slamBurst > 0, 'Expected 3rd hit swordCleave3D to trigger normal-aligned tip shockwave slamBurst at impact');
+    }
+
+    if (s === 3) {
+      // 4th hit (四段·回风贯日刺) executes horizontal piercing thrust (90°) with twin 3D wind-vortex rings
+      const wpThrust = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'combo4', p: 0.42 });
+      assert.equal(wpThrust.gunAng, 90, 'Expected 4th hit spiral thrust to drive horizontally at 90°');
+      assert.equal(wpThrust.slashType, 'swordThrust3D');
     }
     // Render across all 6 characters without error
     for (const spec of Cast.CAST) {
@@ -378,7 +387,7 @@ test('Sword module 3-hit stepped 8-frame upper-body-only combo (horiz -> overhea
     }
   }
 
-  // Verify symmetric double-edged pointed straight sword sprite (上下对称开刃且尖头部居中对称)
+  // Verify symmetric double-edged pointed straight sword sprite (上下对称开刃且尖头部居中对称，加长至 17.5px)
   {
     const P = Rig.poser(xing.spec);
     const po = P.idleSide(0, false);
@@ -404,7 +413,7 @@ test('Sword module 3-hit stepped 8-frame upper-body-only combo (horiz -> overhea
   }
 
   // Verify shoulder-pivot rotation with mouse aim (武器和手臂单独扣出来在肩膀处随鼠标旋转)
-  for (const act of ['combo1', 'combo2', 'combo3', 'skill']) {
+  for (const act of ['combo1', 'combo2', 'combo3', 'combo4', 'skill']) {
     const wp90 = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: act, p: 0.42 });
     const wp135 = Rig.computeWeaponPose({ id: 'blade', aim: 135, action: act, p: 0.42 });
     const wp45 = Rig.computeWeaponPose({ id: 'blade', aim: 45, action: act, p: 0.42 });
@@ -414,20 +423,29 @@ test('Sword module 3-hit stepped 8-frame upper-body-only combo (horiz -> overhea
     assert.equal(wp45.gunAng - wp90.gunAng, -45, `Expected ${act} sword angle to rotate -45° around shoulder when mouse aims at 45°`);
   }
 
-  // Verify Right-Click Charged Sword Wave skill ('skill')
+  // Verify Right-Click 16-Frame Gorgeous Sword Flourish skill ('秘技·流云千瓣剑花' / swordFlourish3D)
+  xing.manual = true;
+  xing.goal = { type: 'manual' };
+  w.summonDummyNear(xing);
+  w.fx.length = 0;
   const skillAct = w.skill(xing);
   assert.equal(skillAct, 'skill');
-  const wpCharge = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'skill', p: 0.35 });
-  assert.ok(wpCharge.chargeLv > 0, 'Expected chargeLv > 0 during waist sword-charging phase');
-  assert.equal(wpCharge.slashType, null, 'Should not release slash wave before p=0.50');
+  const wpSeal = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'skill', p: 0.08 });
+  assert.ok(wpSeal.chargeLv > 0, 'Expected chargeLv > 0 during opening sword-seal poise');
+  assert.equal(wpSeal.slashType, null, 'Should not release flourish petals before p=0.125');
 
-  const wpRelease = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'skill', p: 0.56 });
-  assert.equal(wpRelease.slashType, 'skillWave', 'Expected skillWave slash arc during release phase');
+  const wpFlourish = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: 'skill', p: 0.65 });
+  assert.equal(wpFlourish.slashType, 'swordFlourish3D', 'Expected swordFlourish3D 3D slash arc during flourish finisher');
+  assert.ok(wpFlourish.flourishPhase >= 9, 'Expected finisher flourishPhase >= 9 at p=0.65');
 
-  // Step world forward until swordWave projectile is emitted
-  w.fx.length = 0;
-  for (let i = 0; i < 45; i++) w.step(1 / 60);
-  assert.ok(w.fx.some((e: any) => e.type === 'swordWave'), 'Expected world.fx to emit swordWave projectile when skill reaches release threshold');
+  // Step world forward through the slower 1.28s skill and verify 4 sequential swordFlourish bursts + 4 dummy hits
+  assert.equal(Rig.WEAPONS.blade.skillDur, 1.28, 'Expected Longsword skillDur slowed down to 1.28s');
+  assert.equal(xing.wDur, 1.28, 'Expected agent wDur to use slower 1.28s Longsword skill playback');
+  for (let i = 0; i < 90; i++) w.step(1 / 60);
+  const flourishEvts = w.fx.filter((e: any) => e.type === 'swordFlourish');
+  const flourishHits = w.fx.filter((e: any) => e.type === 'dummyHit');
+  assert.equal(flourishEvts.length, 4, `Expected world.fx to emit 4 sequential swordFlourish bursts, got ${flourishEvts.length}`);
+  assert.equal(flourishHits.length, 4, `Expected 4 sequential dummyHit judgments during Sword Flourish, got ${flourishHits.length}`);
 });
 
 test('Continuous pistol firing while standing still never flickers to 45-degree idle between shots, unchained sword attacks always start from combo1, and running while swinging sword does not overwrite running velocity', () => {
@@ -601,19 +619,21 @@ test('45-degree weapon idle translates the entire weapon sprite rigidly as a who
   }
 });
 
-test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel slash palette, zero canvas clipping, and wooden training dummy hit feel work end-to-end', () => {
+test('Lengthened 17.5px iron longsword 4-combo & 16-frame sword flourish, pure steel slash palette, zero canvas clipping, and wooden training dummy hit feel work end-to-end', () => {
   (globalThis as any).PixelRig = Rig;
   (globalThis as any).PixelCast = Cast;
 
-  assert.equal(Rig.GW, 80, 'Expected Rig.GW to be 80px so wide slash trails are never clipped');
-  assert.equal(Rig.GX, 20, 'Expected Rig.GX horizontal offset to be 20px');
+  assert.equal(Rig.GW, 96, 'Expected Rig.GW to be 96px so 360° Greatsword whirlwinds and wide slash trails are never clipped');
+  assert.equal(Rig.GH, 108, 'Expected Rig.GH to be 108px so downward-pointed colossal blades render completely without bottom truncation');
+  assert.equal(Rig.GX, 28, 'Expected Rig.GX horizontal offset to be 28px');
 
-  // 1. Verify 8-frame stepped keyframe table with natural bent elbows and small torso lean (-1..+1) on every frame
+  // 1. Verify stepped keyframe table (8 frames for combo1..combo4, 16 frames for skill) with natural bent elbows and small torso lean (-1..+1) on every frame
   const kfTable = Rig.SWORD_ACT_KF;
   assert.ok(kfTable, 'Expected Rig.SWORD_ACT_KF to be exported');
-  for (const act of ['combo1', 'combo2', 'combo3', 'skill']) {
-    assert.equal(kfTable[act].length, 8, `Expected ${act} to have exactly 8 stepped keyframes, got ${kfTable[act].length}`);
-    for (let i = 0; i < 8; i++) {
+  for (const act of ['combo1', 'combo2', 'combo3', 'combo4', 'skill']) {
+    const expectedLen = act === 'skill' ? 16 : 8;
+    assert.equal(kfTable[act].length, expectedLen, `Expected ${act} to have exactly ${expectedLen} stepped keyframes, got ${kfTable[act].length}`);
+    for (let i = 0; i < expectedLen; i++) {
       const kf = kfTable[act][i];
       const bend = Math.abs(kf.na[1] - kf.na[0]);
       assert.ok(
@@ -631,13 +651,14 @@ test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel sl
     }
   }
 
-  // 2. Verify NO sword or slash trail pixel is clipped in the 48x46 Inspector window (c in 0..47, r in 33..78)
+  // 2. Verify NO sword or slash trail pixel is clipped in the 96x76 Inspector window (c in 0..95, r in 20..95)
   const xing = Cast.CAST[5];
   const P = Rig.poser(xing);
   const basePo = P.idleSide(0, false);
-  for (const act of ['combo1', 'combo2', 'combo3', 'skill']) {
-    for (let i = 0; i < 8; i++) {
-      const p = (i + 0.35) / 8;
+  for (const act of ['combo1', 'combo2', 'combo3', 'combo4', 'skill']) {
+    const fCount = act === 'skill' ? 16 : 8;
+    for (let i = 0; i < fCount; i++) {
+      const p = (i + 0.35) / fCount;
       const layers: any = Rig.charLayers(xing, basePo, P.hyGround(basePo), 0, {
         weapon: { id: 'blade', aim: 90, action: act, p },
       });
@@ -649,8 +670,8 @@ test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel sl
               `Expected zero horizontal clipping on ${act} frame ${i}, found pixel at col=${c}`
             );
             assert.ok(
-              r >= 22 && r <= 78,
-              `Expected zero vertical clipping inside 72x56 Inspector window (gr 22..78) on ${act} frame ${i}, found pixel at row=${r}`
+              r >= 20 && r <= 95,
+              `Expected zero vertical clipping inside 96x76 Inspector window (gr 20..95) on ${act} frame ${i}, found pixel at row=${r}`
             );
           }
         }
@@ -658,15 +679,16 @@ test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel sl
     }
   }
 
-  // 3. Verify lengthened 13px dark wrought-iron blade & extended white/grey steel slash trail palette fused to the sword blade
+  // 3. Verify lengthened 17.5px dark wrought-iron blade & adapted 3D white/silver slash trail palette fused to the sword blade
   const slashChecks = [
     { act: 'combo1', p: 0.42 },
     { act: 'combo2', p: 0.42 },
     { act: 'combo3', p: 0.42 },
-    { act: 'skill', p: 0.56 },
+    { act: 'combo4', p: 0.42 },
+    { act: 'skill', p: 0.65 },
   ];
   const bladeMetalCols = new Set(['#4e5463', '#8a91a1', '#dce1eb', '#f2f4f8', '#7d8494', '#b8bfd0']);
-  const trailCols = new Set(['#eef1f6', '#9aa1b0', '#646a78', '#3d414b']);
+  const trailCols = new Set(['#ffffff', '#eef1f6', '#dce1eb', '#b8bfd0', '#9aa1b0']);
   for (const { act, p } of slashChecks) {
     const layers: any = Rig.charLayers(xing, basePo, P.hyGround(basePo), 0, {
       weapon: { id: 'blade', aim: 90, action: act, p },
@@ -675,14 +697,14 @@ test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel sl
     const trailPts: Array<[number, number]> = [];
     for (let r = 0; r < Rig.GH; r++) {
       for (let c = 0; c < Rig.GW; c++) {
-        const col = layers.weapon[r][c];
+        const col = layers.weapon[r][c] || layers.backArm[r][c];
         if (!col) continue;
-        if (bladeMetalCols.has(col)) bladePts.push([r, c]);
+        if (layers.weapon[r][c] && bladeMetalCols.has(layers.weapon[r][c])) bladePts.push([r, c]);
         if (trailCols.has(col)) trailPts.push([r, c]);
       }
     }
-    assert.ok(bladePts.length >= 10, `Expected lengthened iron sword blade pixels (>=10) on ${act} at p=${p}, got ${bladePts.length}`);
-    assert.ok(trailPts.length >= 14, `Expected extended white/grey steel slash trail (>=14) on ${act} at p=${p}, got ${trailPts.length}`);
+    assert.ok(bladePts.length >= 16, `Expected lengthened 17.5px iron longsword blade pixels (>=16) on ${act} at p=${p}, got ${bladePts.length}`);
+    assert.ok(trailPts.length >= 24, `Expected adapted 3D white/silver slash trail (>=24) on ${act} at p=${p}, got ${trailPts.length}`);
     let minDist = Infinity;
     for (const [tr, tc] of trailPts) {
       for (const [br, bc] of bladePts) {
@@ -690,10 +712,10 @@ test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel sl
         if (d < minDist) minDist = d;
       }
     }
-    assert.ok(minDist <= 1.5, `Expected steel slash trail on ${act} at p=${p} to be fused to the iron blade (minDist=${minDist})`);
+    assert.ok(minDist <= 1.5, `Expected 3D slash trail on ${act} at p=${p} to be fused to the iron blade (minDist=${minDist})`);
   }
 
-  // 4. Verify holding attackHold chains through all 3 combo hits AND hits the wooden training dummy with hitstop & recoil
+  // 4. Verify holding attackHold chains through all 4 combo hits AND hits the wooden training dummy with hitstop & recoil
   const w = AI.createWorld(11);
   assert.ok(w.dummies && w.dummies.length >= 2, 'Expected wooden training dummies in world');
   const dummy = w.dummies[0];
@@ -706,7 +728,7 @@ test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel sl
   const seenActions = new Set<string>();
   let sawHitstop = false;
   let dummyHitEvents = 0;
-  for (let f = 0; f < 110; f++) {
+  for (let f = 0; f < 135; f++) {
     w.step(1 / 60);
     if (ag.wAction && ag.wAction.startsWith('combo')) {
       seenActions.add(ag.wAction);
@@ -720,19 +742,19 @@ test('8-frame stepped bent-elbow lengthened 13px iron sword combo, dark steel sl
   w.input.attackHold = false;
   assert.deepEqual(
     [...seenActions],
-    ['combo1', 'combo2', 'combo3'],
-    `Expected holding attackHold to chain through 3-stage combo1..combo3, saw ${[...seenActions]}`
+    ['combo1', 'combo2', 'combo3', 'combo4'],
+    `Expected holding attackHold to chain through 4-stage combo1..combo4, saw ${[...seenActions]}`
   );
-  assert.ok(dummyHitEvents >= 3, `Expected all 3 combo hits to strike the wooden training dummy, got ${dummyHitEvents} hits`);
+  assert.ok(dummyHitEvents >= 4, `Expected all 4 combo hits to strike the wooden training dummy, got ${dummyHitEvents} hits`);
   assert.ok(sawHitstop, 'Expected attacker hitstop freeze-frame (hitstopT > 0) when striking wooden dummy');
-  assert.ok(dummy.comboHits >= 3, `Expected dummy combo counter >= 3, got ${dummy.comboHits}`);
+  assert.ok(dummy.comboHits >= 4, `Expected dummy combo counter >= 4, got ${dummy.comboHits}`);
 });
 
-test('All sword slashes (combo1, combo2, combo3, skill) use pure white slash trails and procedural NPC batch generator composes modular heads (base head + hair + hat) over a unified body compatible with all actions', () => {
+test('All sword slashes (combo1..combo4, skill) use pure white slash trails and procedural NPC batch generator composes modular heads (base head + hair + hat) over a unified body compatible with all actions', () => {
   (globalThis as any).PixelRig = Rig;
   (globalThis as any).PixelCast = Cast;
 
-  // 1. Verify all 4 sword slash actions (combo1, combo2, combo3, skill) render pure white (#eef1f6) slash trails
+  // 1. Verify all 5 sword slash actions (combo1..combo4, skill) render pure white (#eef1f6 / #ffffff) slash trails without dark grey
   const xing = Cast.CAST[5];
   const P = Rig.poser(xing);
   const basePo = P.idleSide(0, false);
@@ -740,7 +762,8 @@ test('All sword slashes (combo1, combo2, combo3, skill) use pure white slash tra
     { act: 'combo1', p: 0.42 },
     { act: 'combo2', p: 0.42 },
     { act: 'combo3', p: 0.56 },
-    { act: 'skill', p: 0.56 },
+    { act: 'combo4', p: 0.42 },
+    { act: 'skill', p: 0.65 },
   ]) {
     const layers: any = Rig.charLayers(xing, basePo, P.hyGround(basePo), 0, {
       weapon: { id: 'blade', aim: 90, action: act, p },
@@ -750,15 +773,19 @@ test('All sword slashes (combo1, combo2, combo3, skill) use pure white slash tra
     let darkGreyCount = 0;
     for (let r = 0; r < Rig.GH; r++) {
       for (let c = 0; c < Rig.GW; c++) {
-        const col = layers.weapon[r][c];
-        if (col === '#eef1f6') pureWhiteCount++;
-        if (col === '#dce1eb' || col === '#b8bfd0' || col === '#9aa1b0') gradientCount++;
-        if (col === '#3d414b' || col === '#646a78') darkGreyCount++;
+        const wCol = layers.weapon[r][c];
+        const bCol = layers.backArm[r][c];
+        for (const col of [wCol, bCol]) {
+          if (!col) continue;
+          if (col === '#eef1f6' || col === '#ffffff') pureWhiteCount++;
+          if (col === '#dce1eb' || col === '#b8bfd0' || col === '#9aa1b0') gradientCount++;
+          if (col === '#3d414b' || col === '#646a78') darkGreyCount++;
+        }
       }
     }
     assert.ok(
       pureWhiteCount >= 18,
-      `Expected ${act} at p=${p} to have a prominent pure white (#eef1f6) outer tip arc (>=18 px), got ${pureWhiteCount}`
+      `Expected ${act} at p=${p} to have a prominent pure white (#eef1f6/#ffffff) outer tip arc (>=18 px), got ${pureWhiteCount}`
     );
     assert.ok(
       gradientCount >= 12,
@@ -898,7 +925,7 @@ test('All sword slashes (combo1, combo2, combo3, skill) use pure white slash tra
         for (let c = 0; c < Rig.GW; c++) {
           if (g[r][c]) {
             pxCount++;
-            assert.ok(r >= 22 && r <= 78, `Expected procedural NPC ${npc.id} pixel row=${r} within [22..78]`);
+            assert.ok(r >= 20 && r <= 95, `Expected procedural NPC ${npc.id} pixel row=${r} within 96x76 Inspector [20..95]`);
             assert.ok(c >= 0 && c < Rig.GW, `Expected procedural NPC ${npc.id} pixel col=${c} within [0..${Rig.GW - 1}]`);
           }
         }
@@ -1375,7 +1402,7 @@ test('19. Three Humanoid Alien Races (Cathode-Folk, Myco-Hosts, Cinderborn) pres
       for (let r = 0; r < Rig.GH; r++) {
         for (let c = 0; c < Rig.GW; c++) {
           if (g[r][c]) {
-            assert.ok(r >= 22 && r <= 78, `Expected ${alien.species} pixel row=${r} within [22..78]`);
+            assert.ok(r >= 20 && r <= 95, `Expected ${alien.species} pixel row=${r} within 96x76 Inspector [20..95]`);
             assert.ok(c >= 0 && c < Rig.GW, `Expected ${alien.species} pixel col=${c} within [0..${Rig.GW - 1}]`);
           }
         }
@@ -1820,11 +1847,11 @@ test('Cinderborn (cinder) supports 12 preset variants, 12 distinct mineral/magma
 // Test 23: Extra-Long Iron Katana (Sheathed Akimbo Idle, 4-Stage Reference Combo, Sheathed Star + 3 Vertical Crescent Tears)
 // & Iron Greatsword (3-Stage Combo) Decoupled Arm + Weapon Layer Architecture
 // ─────────────────────────────────────────────────────────────────────────────
-test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescent, 4-stage combo, detached 3-slash skill) and Colossal Iron Greatsword (shoulder-carry idle & walk, 2-stage 3-beat heavy combo) work across all characters and procedural NPCs', () => {
+test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescent, 4-stage combo, detached 3-slash skill) and Colossal Iron Greatsword (shoulder-carry idle & walk, 4-stage 3-beat heavy combo + 360° whirlwind finisher) work across all characters and procedural NPCs', () => {
   assert.ok(Rig.WEAPONS.katana, 'Expected Rig.WEAPONS.katana to be defined');
   assert.ok(Rig.WEAPONS.greatsword, 'Expected Rig.WEAPONS.greatsword to be defined');
   assert.equal(Rig.WEAPONS.katana.comboCount, 4, 'Expected Katana comboCount = 4');
-  assert.equal(Rig.WEAPONS.greatsword.comboCount, 2, 'Expected Greatsword comboCount = 2');
+  assert.equal(Rig.WEAPONS.greatsword.comboCount, 4, 'Expected Greatsword comboCount = 4');
   assert.ok(Rig.KATANA_ACT_KF && Rig.GREATSWORD_ACT_KF, 'Expected KATANA_ACT_KF and GREATSWORD_ACT_KF to be exported');
 
   // 1) Verify Katana stays SHEATHED with one hand gripping the hilt during 45° idle, side idle, walking, running, and aiming
@@ -1868,7 +1895,7 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
       });
       let sumR = 0, sumC = 0, cnt = 0;
       for (let r = 0; r < Rig.GH; r++) {
-        for (let c = 42; c < Rig.GW; c++) {
+        for (let c = 22 + Rig.GX; c < Rig.GW; c++) {
           if (l.weapon[r][c]) {
             sumR += r;
             sumC += c;
@@ -1959,13 +1986,15 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
       `Expected colossal shoulder-carried Greatsword sprite to span >=18 cols, >=16 rows, and >=95 pixels, got cols=${maxGsC - minGsC}, rows=${maxGsR - minGsR}, pix=${gsPix}`
     );
 
-    // 4b) Verify Greatsword 2-stage heavy combo + skill follow the 3-beat rule (Beat 1 Windup p=0.14 -> Beat 2 Full Slash p=0.42 -> Beat 3 Weapon Frozen + Half Retracted p=0.70)
+    // 4b) Verify Greatsword 4-stage heavy combo (including 360° Whirlwind Cleave with spinFlip character turn) + 16-frame Savage Lion's Claw skill
+    assert.equal(Rig.WEAPONS.greatsword.comboCount, 4, 'Expected Greatsword comboCount to be upgraded to 4');
     const gsExpected: Record<string, { style: string; endAng: number }> = {
       combo1: { style: 'gsColossalUp3D', endAng: 152 },
-      combo2: { style: 'gsEarthShatter3D', endAng: 6 },
-      skill: { style: 'gsTectonic3D', endAng: 74 },
+      combo2: { style: 'gsWideSweep3D', endAng: 116 },
+      combo3: { style: 'gsEarthShatter3D', endAng: 68 },
+      combo4: { style: 'gsWhirlwind3D', endAng: 106 },
     };
-    for (const act of ['combo1', 'combo2', 'skill']) {
+    for (const act of ['combo1', 'combo2', 'combo3', 'combo4']) {
       const cfg = gsExpected[act];
       const b1 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: act, p: 0.14 });
       const b2 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: act, p: 0.42 });
@@ -1980,16 +2009,118 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
       assert.deepEqual(b3.na, b2.na, `Expected Greatsword ${act} Beat 3 to freeze front arm`);
       assert.deepEqual(b3.fa, b2.fa, `Expected Greatsword ${act} Beat 3 to freeze back arm`);
       assert.equal(b3.slashRetract, 0.5, `Expected Greatsword ${act} Beat 3 to retract slash trail by half (slashRetract = 0.5)`);
+
+      if (act !== 'combo4') {
+        const tailEnd = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: act, p: 0.99 });
+        assert.equal(tailEnd.gunAng, cfg.endAng, `Expected Greatsword ${act} p=0.99 to hold finished slash angle (${cfg.endAng}) without flashing next windup`);
+      }
+    }
+
+    // Verify Greatsword combo4 Whirlwind character turn (spinFlip = true at p=0.28 flips body horizontally around hipCol, then snaps back at p=0.42)
+    const poStand = P.idleSide(0, false);
+    const wpWhirlTurn = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'combo4', p: 0.28 });
+    const wpWhirlFront = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'combo4', p: 0.42 });
+    assert.equal(wpWhirlTurn.spinFlip, true, 'Expected Greatsword combo4 p=0.28 to enable spinFlip character turn');
+    assert.equal(wpWhirlFront.spinFlip, false, 'Expected Greatsword combo4 p=0.42 to turn back forward (spinFlip = false)');
+    const lTurn: any = Rig.charLayers(lin, poStand, P.hyGround(poStand), 0, { weapon: { id: 'greatsword', aim: 90, action: 'combo4', p: 0.28 } });
+    const lFront: any = Rig.charLayers(lin, poStand, P.hyGround(poStand), 0, { weapon: { id: 'greatsword', aim: 90, action: 'combo4', p: 0.42 } });
+    const headAvgCol = (grid: any) => {
+      let sc = 0, n = 0;
+      for (let r = 46; r <= 58; r++) {
+        for (let c = 0; c < Rig.GW; c++) {
+          if (grid[r][c]) { sc += c; n++; }
+        }
+      }
+      return sc / Math.max(1, n);
+    };
+    assert.ok(
+      headAvgCol(lTurn.body) < headAvgCol(lFront.body) - 2.0,
+      `Expected Greatsword combo4 p=0.28 character turn to mirror head/torso toward rear (-x): turnCol=${headAvgCol(lTurn.body).toFixed(2)}, frontCol=${headAvgCol(lFront.body).toFixed(2)}`
+    );
+
+    // Verify 16-frame Savage Lion's Claw (勇猛狮子斩) skill: two 360° forward somersaults + two 3-beat overhead slams
+    assert.equal(Rig.GREATSWORD_ACT_KF.skill.length, 16, 'Expected Greatsword Savage Lion\'s Claw skill to have 16 keyframes');
+    const lionFlip1 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.14 });
+    const lionSlam1Full = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.26 });
+    const lionSlam1Half = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.33 });
+    const lionFlip2 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.51 });
+    const lionSlam2Full = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.64 });
+    const lionSlam2Half = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.76 });
+    assert.ok(lionFlip1.somersaultPhi >= 180 && lionFlip1.trailFrom === null, 'Expected Lion\'s Claw 1st somersault frame to rotate mid-air with trailFrom === null');
+    // Verify all 4 airborne somersault frames (F0..F3) sweep the Greatsword monotonically clockwise across distinct quadrants (no collinear flip frames)
+    const f0 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.02 });
+    const f1 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.08 });
+    const f2 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.14 });
+    const f3 = Rig.computeWeaponPose({ id: 'greatsword', aim: 90, action: 'skill', p: 0.20 });
+    assert.ok(f0.gunAng < -20 && f1.gunAng < f0.gunAng - 35 && f2.gunAng < f1.gunAng - 35 && f3.gunAng > 140, 'Expected Lion\'s Claw somersault frames F0..F3 to wheel the Greatsword monotonically clockwise through 4 distinct quadrants');
+    assert.equal(lionSlam1Full.gunAng, 68, 'Expected Lion\'s Claw 1st slam angle = 68°');
+    assert.equal(lionSlam1Full.slashRetract, 0, 'Expected Lion\'s Claw 1st slam full trail');
+    assert.equal(lionSlam1Half.gunAng, 68, 'Expected Lion\'s Claw 1st slam Beat 3 to freeze weapon at 68°');
+    assert.equal(lionSlam1Half.slashRetract, 0.5, 'Expected Lion\'s Claw 1st slam Beat 3 half-retract');
+    assert.ok(lionFlip2.somersaultPhi >= 180 && lionFlip2.trailFrom === null, 'Expected Lion\'s Claw 2nd somersault frame to rotate mid-air with trailFrom === null');
+    assert.equal(lionSlam2Full.gunAng, 62, 'Expected Lion\'s Claw 2nd finisher slam angle = 62°');
+    assert.equal(lionSlam2Full.slashRetract, 0, 'Expected Lion\'s Claw 2nd slam full trail');
+    assert.equal(lionSlam2Half.gunAng, 62, 'Expected Lion\'s Claw 2nd slam Beat 3 to freeze weapon at 62°');
+    assert.equal(lionSlam2Half.slashRetract, 0.5, 'Expected Lion\'s Claw 2nd slam Beat 3 half-retract');
+
+    // 4c) Verify ZERO bottom weapon truncation when Greatsword points straight downward (aim = 0° / 30°) AND ZERO horizontal y=75 ground-line bug!
+    const layersDownAim: any = Rig.charLayers(lin, poStand, P.hyGround(poStand), 0, {
+      weapon: { id: 'greatsword', aim: 20, action: 'combo3', p: 0.42 },
+    });
+    let maxDownRow = 0;
+    for (let r = 0; r < Rig.GH; r++) {
+      for (let c = 0; c < Rig.GW; c++) {
+        if (layersDownAim.weapon[r][c] && r > maxDownRow) maxDownRow = r;
+      }
+    }
+    assert.ok(
+      maxDownRow >= 86,
+      `Expected downward-aimed Greatsword to render completely below foot row 75 without truncation (maxRow >= 86), got maxRow=${maxDownRow}`
+    );
+
+    // Check that horizontal ground-line bug on row 75 is completely gone on Greatsword combos & Savage Lion's Claw slams
+    for (const [act, checkP] of [['combo1', 0.42], ['combo2', 0.42], ['combo3', 0.42], ['combo4', 0.42], ['skill', 0.26], ['skill', 0.64]] as const) {
+      const lCheck: any = Rig.charLayers(lin, poStand, P.hyGround(poStand), 0, {
+        weapon: { id: 'greatsword', aim: 90, action: act, p: checkP },
+      });
+      let maxContigWhiteOn75 = 0;
+      let curRun = 0;
+      for (let c = 0; c < Rig.GW; c++) {
+        const px = lCheck.weapon[75][c];
+        if (px === '#ffffff' || px === '#eef1f6') {
+          curRun++;
+          if (curRun > maxContigWhiteOn75) maxContigWhiteOn75 = curRun;
+        } else {
+          curRun = 0;
+        }
+      }
+      assert.ok(
+        maxContigWhiteOn75 <= 6,
+        `Expected NO artificial horizontal white ground line on row 75 during Greatsword ${act} (p=${checkP}), got contiguous run=${maxContigWhiteOn75}`
+      );
     }
   }
 
-  // 5) Verify 3D slash trail pixel counts & Beat 3 half-retraction for both Katana and Colossal Greatsword
+  // 5) Verify 3D slash trail pixel counts, 360° Whirlwind wrap, & Beat 3 half-retraction for both Katana and Colossal Greatsword
   const xing = Cast.CAST[5];
   const P = Rig.poser(xing);
   const poSide = P.idleSide(0, false);
-  const countTrailPixels = (wep: any, useDetached = false) => {
+  const isTrailCol = (col: string | null) =>
+    col === '#ffffff' ||
+    col === '#eef1f6' ||
+    col === '#dce1eb' ||
+    col === '#b8bfd0' ||
+    col === '#9aa1b0' ||
+    col === '#686e7c' ||
+    col === '#4a4f5c';
+
+  const countTrailPixels = (wep: any, useDetached = false, includeBack = false) => {
     const layers: any = Rig.charLayers(xing, poSide, P.hyGround(poSide), 0, { weapon: wep });
-    const grid = useDetached ? layers.detachedFX : layers.weapon;
+    const grids = useDetached
+      ? [layers.detachedFX]
+      : includeBack
+      ? [layers.weapon, layers.backArm]
+      : [layers.weapon];
     let white = 0;
     let shatteredGrey = 0;
     let total = 0;
@@ -2000,17 +2131,9 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
     let maxRow = 0;
     for (let r = 0; r < Rig.GH; r++) {
       for (let c = 0; c < Rig.GW; c++) {
-        const col = grid[r][c];
+        const col = grids[0][r][c] || (grids[1] && isTrailCol(grids[1][r][c]) ? grids[1][r][c] : null);
         if (!col) continue;
-        if (
-          col === '#ffffff' ||
-          col === '#eef1f6' ||
-          col === '#dce1eb' ||
-          col === '#b8bfd0' ||
-          col === '#9aa1b0' ||
-          col === '#686e7c' ||
-          col === '#4a4f5c'
-        ) {
+        if (isTrailCol(col)) {
           total++;
           if (col === '#eef1f6' || col === '#ffffff') white++;
           if (col === '#9aa1b0' || col === '#686e7c' || col === '#4a4f5c') shatteredGrey++;
@@ -2037,6 +2160,10 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
   const gsC1Half = countTrailPixels({ id: 'greatsword', aim: 90, action: 'combo1', p: 0.70 });
   const gsC2Full = countTrailPixels({ id: 'greatsword', aim: 90, action: 'combo2', p: 0.42 });
   const gsC2Half = countTrailPixels({ id: 'greatsword', aim: 90, action: 'combo2', p: 0.70 });
+  const gsC3Full = countTrailPixels({ id: 'greatsword', aim: 90, action: 'combo3', p: 0.42 });
+  const gsC3Half = countTrailPixels({ id: 'greatsword', aim: 90, action: 'combo3', p: 0.70 });
+  const gsC4Full = countTrailPixels({ id: 'greatsword', aim: 90, action: 'combo4', p: 0.42 }, false, true);
+  const gsC4Half = countTrailPixels({ id: 'greatsword', aim: 90, action: 'combo4', p: 0.70 }, false, true);
 
   const c1Width = katanaC1Full.maxCol - katanaC1Full.minCol;
   const c1Height = katanaC1Full.maxRow - katanaC1Full.minRow;
@@ -2061,22 +2188,35 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
     `Expected Katana Skill detachedFX layer to contain the 3 half-body orbiting slashes (white=${katanaSkDetached.white}, grey=${katanaSkDetached.shatteredGrey})`
   );
 
-  // Colossal Greatsword slash trails must be much heavier than standard sword and retract by half on Beat 3
+  // Colossal Greatsword 4-stage slash trails must be heavy and retract cleanly by half on Beat 3
   assert.ok(
-    gsC1Full.total > swordC3.total * 1.35 && gsC1Full.touchesGround,
-    `Expected Greatsword Hit 1 ground-scraping upward hurricane (${gsC1Full.total} px) to be thicker than standard sword (${swordC3.total} px)`
+    gsC1Full.total > swordC3.total * 1.35 && gsC1Half.total < gsC1Full.total && gsC1Half.total >= 60,
+    `Expected Greatsword Hit 1 upward hurricane full=${gsC1Full.total} > half=${gsC1Half.total}`
   );
   assert.ok(
-    gsC1Half.total < gsC1Full.total && gsC1Half.total >= 60,
-    `Expected Greatsword Hit 1 Beat 3 half-retracted trail (${gsC1Half.total}) < Beat 2 full trail (${gsC1Full.total})`
+    gsC2Full.maxCol - gsC2Full.minCol >= 38 && gsC2Half.total < gsC2Full.total && gsC2Half.total >= 60,
+    `Expected Greatsword Hit 2 wide horizontal sweep span=${gsC2Full.maxCol - gsC2Full.minCol}, full=${gsC2Full.total} > half=${gsC2Half.total}`
   );
   assert.ok(
-    gsC2Full.total > swordC3.total * 1.45 && gsC2Full.touchesGround,
-    `Expected Greatsword Hit 2 240° Lion's Claw earth-shatter slam (${gsC2Full.total} px) to be thicker than standard sword (${swordC3.total} px)`
+    gsC3Full.total > swordC3.total * 1.35 && gsC3Half.total < gsC3Full.total && gsC3Half.total >= 60,
+    `Expected Greatsword Hit 3 Lion's Claw slam full=${gsC3Full.total} > half=${gsC3Half.total}`
+  );
+  // Stage 4 360° Whirlwind Cleave must wrap far behind the warrior's back AND far in front, with rear cyclone pixels on backArm layer!
+  const hipGridCol = 16 + Rig.GX;
+  let rearWhirlPixels = 0;
+  for (let r = 0; r < Rig.GH; r++) {
+    for (let c = 0; c < Rig.GW; c++) {
+      const col = gsC4Full.layers.backArm[r][c];
+      if (col === '#ffffff' || col === '#eef1f6' || col === '#dce1eb') rearWhirlPixels++;
+    }
+  }
+  assert.ok(
+    gsC4Full.minCol <= hipGridCol - 18 && gsC4Full.maxCol >= hipGridCol + 22 && rearWhirlPixels >= 15,
+    `Expected Greatsword Hit 4 360° Whirlwind Cleave to wrap around body (minCol=${gsC4Full.minCol}, hip=${hipGridCol}, maxCol=${gsC4Full.maxCol}, rearLayerWhirlPixels=${rearWhirlPixels})`
   );
   assert.ok(
-    gsC2Half.total < gsC2Full.total && gsC2Half.total >= 60,
-    `Expected Greatsword Hit 2 Beat 3 half-retracted trail (${gsC2Half.total}) < Beat 2 full trail (${gsC2Full.total})`
+    gsC4Half.total < gsC4Full.total && gsC4Half.total >= 80,
+    `Expected Greatsword Hit 4 360° Whirlwind Beat 3 half-retracted trail (${gsC4Half.total}) < Beat 2 full trail (${gsC4Full.total})`
   );
 
   // 6) Verify decoupled arm + weapon compatibility across ALL 6 CAST characters + procedural Human, Cathode, Myco, and Cinder NPCs
@@ -2093,7 +2233,7 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
     const spBasePo = SP.idleSide(0.2, false);
     for (const [wId, acts] of [
       ['katana', ['combo1', 'combo2', 'combo3', 'combo4', 'skill']] as const,
-      ['greatsword', ['combo1', 'combo2', 'skill']] as const,
+      ['greatsword', ['combo1', 'combo2', 'combo3', 'combo4', 'skill']] as const,
     ]) {
       const po0 = SP.weaponIdle(wId, 0.0, false); // bob = 0
       const po1 = SP.weaponIdle(wId, 1.0, false); // bob = -1
@@ -2110,19 +2250,24 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
       assert.deepEqual(pts0, pts1, `Expected 45° ${wId} idle on ${spec.id} to translate rigidly with bob without relative pixel deformation`);
 
       for (const act of acts) {
-        const strikeP = wId === 'katana' && act === 'combo4' ? 0.56 : wId === 'greatsword' ? 0.42 : 0.28;
-        const layers: any = Rig.charLayers(spec, spBasePo, SP.hyGround(spBasePo), 0, {
-          weapon: { id: wId, aim: 90, action: act, p: strikeP },
-        });
-        assert.ok(layers.backArm.flat().some(Boolean), `Expected non-empty backArm layer for ${spec.id} wielding ${wId} (${act})`);
-        assert.ok(layers.body.flat().some(Boolean), `Expected non-empty body layer for ${spec.id} wielding ${wId} (${act})`);
-        assert.ok(layers.weapon.flat().some(Boolean), `Expected non-empty weapon layer for ${spec.id} wielding ${wId} (${act})`);
-        assert.ok(layers.frontArm.flat().some(Boolean), `Expected non-empty frontArm layer for ${spec.id} wielding ${wId} (${act})`);
-        for (let r = 0; r < Rig.GH; r++) {
-          for (let c = 0; c < Rig.GW; c++) {
-            if (layers.composite[r][c]) {
-              assert.ok(r >= 20 && r <= 78, `Expected ${spec.id} (${wId} ${act}) row=${r} within [20..78]`);
-              assert.ok(c >= 0 && c < Rig.GW, `Expected ${spec.id} (${wId} ${act}) col=${c} within [0..${Rig.GW - 1}]`);
+        const pSamples =
+          wId === 'greatsword' && act === 'skill'
+            ? Array.from({ length: 16 }, (_, fi) => (fi + 0.5) / 16)
+            : [wId === 'katana' && act === 'combo4' ? 0.56 : wId === 'greatsword' ? 0.42 : 0.28];
+        for (const strikeP of pSamples) {
+          const layers: any = Rig.charLayers(spec, spBasePo, SP.hyGround(spBasePo), 0, {
+            weapon: { id: wId, aim: 90, action: act, p: strikeP },
+          });
+          assert.ok(layers.backArm.flat().some(Boolean), `Expected non-empty backArm layer for ${spec.id} wielding ${wId} (${act} p=${strikeP})`);
+          assert.ok(layers.body.flat().some(Boolean), `Expected non-empty body layer for ${spec.id} wielding ${wId} (${act} p=${strikeP})`);
+          assert.ok(layers.weapon.flat().some(Boolean), `Expected non-empty weapon layer for ${spec.id} wielding ${wId} (${act} p=${strikeP})`);
+          assert.ok(layers.frontArm.flat().some(Boolean), `Expected non-empty frontArm layer for ${spec.id} wielding ${wId} (${act} p=${strikeP})`);
+          for (let r = 0; r < Rig.GH; r++) {
+            for (let c = 0; c < Rig.GW; c++) {
+              if (layers.composite[r][c]) {
+                assert.ok(r >= 20 && r <= 95, `Expected ${spec.id} (${wId} ${act} p=${strikeP.toFixed(3)}) row=${r} within 96x76 Inspector [20..95]`);
+                assert.ok(c >= 2 && c < Rig.GW - 1, `Expected ${spec.id} (${wId} ${act} p=${strikeP.toFixed(3)}) col=${c} within unclipped canvas bounds`);
+              }
             }
           }
         }
@@ -2130,11 +2275,33 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
     }
   }
 
-  // 7) Verify AI world chaining for Katana (4-combo), Katana 3-hit right-click skill, and Greatsword (2-combo)
+  // 7) Verify AI world chaining, clean mid-combo mouse release direct return to 45° idle, and Greatsword Savage Lion's Claw 2-hit skill
   const w = AI.createWorld(11);
   const ag = w.agents[5];
   ag.manual = true;
   ag.goal = { type: 'manual' };
+
+  // 7a) Clean mid-combo mouse release for both Katana and Greatsword: must return DIRECTLY to 45° idle without flashing next-stage windup or side-aim frame
+  for (const [wepId, forbiddenNextWindupAng] of [['katana', 40], ['greatsword', -58]] as const) {
+    w.setWeapon(ag, wepId);
+    w.swing(ag); // Start combo1 and immediately release mouse
+    w.input.attackHold = false;
+    let returnedToAim = false;
+    for (let f = 0; f < 60; f++) {
+      w.step(1 / 60);
+      const fp = AI.framePose(ag);
+      assert.notEqual(ag.wAction, 'combo2', `Expected ${wepId} single click + release NOT to enter combo2`);
+      const wpNow = Rig.computeWeaponPose(fp.weapon);
+      assert.notEqual(wpNow.gunAng, forbiddenNextWindupAng, `Expected ${wepId} mid-combo release NEVER to flash next-stage windup angle ${forbiddenNextWindupAng}°`);
+      if (ag.wAction === 'aim') {
+        assert.equal(fp.po.v34, true, `Expected ${wepId} to return DIRECTLY to 45° v34 idle on the very first frame wAction becomes 'aim'`);
+        assert.equal(fp.weapon.action, 'idle', `Expected ${wepId} weapon action to be 'idle' immediately upon mid-combo release completion`);
+        returnedToAim = true;
+        break;
+      }
+    }
+    assert.ok(returnedToAim, `Expected ${wepId} combo1 to finish and return directly to idle`);
+  }
 
   w.setWeapon(ag, 'katana');
   w.input.attackHold = true;
@@ -2169,19 +2336,458 @@ test('23. Extra-Long Iron Katana (Stage 1 blade-attached aim-rotating 3D crescen
   assert.equal(dummyHitEvts.length, 3, `Expected Katana right-click 3-slash skill to trigger 3 separate damage judgments, got ${dummyHitEvts.length}`);
   assert.equal((ag.stats.dummyHits || 0) - hitsBefore, 3, 'Expected agent dummyHits counter to increment by 3');
 
-  // Test Greatsword 2-combo chain
+  // Test Greatsword 4-combo chain (including combo4 360° Whirlwind Cleave hitting nearby dummy)
+  ag.x -= 40;
+  w.summonDummyNear(ag);
+  w.fx.length = 0;
   w.setWeapon(ag, 'greatsword');
   w.input.attackHold = true;
   const seenGs = new Set<string>();
-  for (let f = 0; f < 140; f++) {
+  for (let f = 0; f < 220; f++) {
     w.step(1 / 60);
     if (ag.wAction && ag.wAction.startsWith('combo')) seenGs.add(ag.wAction);
   }
   w.input.attackHold = false;
   assert.deepEqual(
     [...seenGs],
-    ['combo1', 'combo2'],
-    `Expected Greatsword attackHold to chain through both heavy stages combo1..combo2, saw ${[...seenGs]}`
+    ['combo1', 'combo2', 'combo3', 'combo4'],
+    `Expected Greatsword attackHold to chain through all 4 heavy stages combo1..combo4, saw ${[...seenGs]}`
   );
+  const gsDummyHits = w.fx.filter((e: any) => e.type === 'dummyHit');
+  assert.ok(gsDummyHits.length >= 5, `Expected Greatsword 4-combo (with 2-hit 360° whirlwind finisher) to land >=5 dummy hits, got ${gsDummyHits.length}`);
+
+  // 7b) Test Greatsword Right-Click "Savage Lion's Claw" (勇猛狮子斩): leaps twice, somersaults, and lands 2 separate heavy slams on dummy
+  w.summonDummyNear(ag);
+  w.fx.length = 0;
+  const lionHitsBefore = ag.stats.dummyHits || 0;
+  const groundY = ag.y;
+  let minLionY = groundY;
+  let airToGroundTransitions = 0;
+  let prevGrounded = ag.grounded;
+  w.skill(ag);
+  for (let f = 0; f < 95; f++) {
+    w.step(1 / 60);
+    if (ag.y < minLionY) minLionY = ag.y;
+    if (!prevGrounded && ag.grounded) airToGroundTransitions++;
+    prevGrounded = ag.grounded;
+  }
+  const lionDummyHits = w.fx.filter((e: any) => e.type === 'dummyHit');
+  assert.ok(minLionY <= groundY - 8, `Expected Savage Lion's Claw to leap high off the ground (minY=${minLionY.toFixed(1)}, groundY=${groundY})`);
+  assert.equal(airToGroundTransitions, 2, `Expected Savage Lion's Claw to perform 2 distinct leaps + landings, got ${airToGroundTransitions}`);
+  assert.equal(lionDummyHits.length, 2, `Expected Savage Lion's Claw to land 2 heavy slashes on the dummy, got ${lionDummyHits.length}`);
+  assert.equal((ag.stats.dummyHits || 0) - lionHitsBefore, 2, 'Expected dummyHits counter to increment by 2 during Savage Lion\'s Claw');
 });
+
+test('Reworked 17.5px Longsword (4-combo + 16-frame 3D Sword Flourish) and Universal Sequence-Frame Aim Lock + Inter-Move Gap Turning across all weapons', () => {
+  (globalThis as any).PixelRig = Rig;
+  (globalThis as any).PixelCast = Cast;
+
+  // 1) Verify lengthened 17.5px Longsword physical reach & 3-beat frozen-weapon half-retract law + zero ground-line artifacts
+  const xingSpec = Cast.CAST[5];
+  const P = Rig.poser(xingSpec);
+  const basePo = P.idleSide(0, false);
+  const layersAim: any = Rig.charLayers(xingSpec, basePo, P.hyGround(basePo), 0, {
+    weapon: { id: 'blade', aim: 66, action: 'aim', p: 0 },
+  });
+  const swordRow = layersAim.muzzle.y;
+  const swordCols: number[] = [];
+  for (let c = 0; c < Rig.GW; c++) {
+    if (layersAim.weapon[swordRow][c]) swordCols.push(c);
+  }
+  const minSwordCol = Math.min(...swordCols);
+  const maxSwordCol = Math.max(...swordCols);
+  assert.ok(
+    maxSwordCol - minSwordCol >= 19,
+    `Expected lengthened 17.5px Iron Longsword horizontal span (pommel..tip) >= 19px, got ${maxSwordCol - minSwordCol}px (${minSwordCol}..${maxSwordCol})`
+  );
+
+  // Verify 3-beat law (Beat 2 peak gunAng == Beat 3 half-retract gunAng while slashRetract increases >= 0.45) on combo1..combo4 and skill
+  for (const [act, pPeak, pRetract] of [
+    ['combo1', 0.28, 0.56],
+    ['combo2', 0.28, 0.56],
+    ['combo3', 0.42, 0.70],
+    ['combo4', 0.28, 0.56],
+    ['skill', 0.65, 0.76],
+  ] as const) {
+    const wpPeak = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: act, p: pPeak });
+    const wpRet = Rig.computeWeaponPose({ id: 'blade', aim: 90, action: act, p: pRetract });
+    assert.equal(
+      wpPeak.gunAng,
+      wpRet.gunAng,
+      `Expected Longsword ${act} Beat 3 (p=${pRetract}) to keep sword frozen at ${wpPeak.gunAng}°, got ${wpRet.gunAng}°`
+    );
+    assert.ok(
+      wpRet.slashRetract >= 0.48 && wpRet.slashRetract > wpPeak.slashRetract,
+      `Expected Longsword ${act} Beat 3 slashRetract (${wpRet.slashRetract}) >= 0.48`
+    );
+  }
+
+  // Verify 16-frame Sword Flourish has nimble 180° body turn (spinFlip on F6 -> snap back on F7) and 4 SEQUENTIAL non-stacking slashes!
+  const f6 = Rig.SWORD_ACT_KF.skill[6];
+  const f7 = Rig.SWORD_ACT_KF.skill[7];
+  assert.equal(f6.spinFlip, true, 'Expected Sword Flourish F6 to flip character (spinFlip: true) for nimble back-hand spin');
+  assert.equal(f7.spinFlip, false, 'Expected Sword Flourish F7 to snap back forward (spinFlip: false) for 3rd horizontal wrap slash');
+
+  // Verify sequential emergence: Slash #1 (F2, upward-right) and Slash #2 (F4, downward-right) have distinct vertical centroids & half-retract in between (F3)
+  const countTrailStats = (pVal: number) => {
+    const ly: any = Rig.charLayers(xingSpec, basePo, P.hyGround(basePo), 0, {
+      weapon: { id: 'blade', aim: 90, action: 'skill', p: pVal },
+    });
+    let count = 0, sumR = 0, rearPx = 0, frontWhite = 0;
+    for (let r = 0; r < Rig.GH; r++) {
+      for (let c = 0; c < Rig.GW; c++) {
+        const wc = ly.weapon[r][c], bc = ly.backArm[r][c];
+        if (wc === '#ffffff' || wc === '#eef1f6' || bc === '#ffffff' || bc === '#eef1f6') {
+          count++;
+          sumR += r;
+        }
+        if (bc === '#b8bfd0' || bc === '#9aa1b0' || bc === '#dce1eb') rearPx++;
+        if (wc === '#ffffff' || wc === '#eef1f6') frontWhite++;
+      }
+    }
+    return { count, avgR: count ? sumR / count : 0, rearPx, frontWhite };
+  };
+  const s1Full = countTrailStats(2.5 / 16); // F2: Slash #1 full (upward-right)
+  const s1Half = countTrailStats(3.5 / 16); // F3: Slash #1 half-retracted
+  const s2Full = countTrailStats(4.5 / 16); // F4: Slash #2 full (downward-right)
+  const s2Half = countTrailStats(5.5 / 16); // F5: Slash #2 half-retracted
+  const s4Full = countTrailStats(10.5 / 16); // F10: Slash #4 finisher full
+  assert.ok(s1Half.count < s1Full.count, `Expected Slash #1 to retract on F3 (${s1Half.count} < ${s1Full.count}) before Slash #2 appears`);
+  assert.ok(s2Half.count < s2Full.count, `Expected Slash #2 to retract on F5 (${s2Half.count} < ${s2Full.count}) before Slash #3 appears`);
+  assert.ok(s2Full.avgR > s1Full.avgR + 2.5, `Expected Slash #1 (avgR=${s1Full.avgR.toFixed(1)}) and Slash #2 (avgR=${s2Full.avgR.toFixed(1)}) to appear in distinct upper vs lower planes rather than stacking`);
+  assert.ok(s4Full.rearPx >= 8, `Expected 3D Sword Flourish finisher to wrap rear arc pixels behind character in backArm (>=8), got ${s4Full.rearPx}`);
+  assert.ok(s4Full.frontWhite >= 24, `Expected 3D Sword Flourish finisher to render bright front arc & tip star in weapon (>=24), got ${s4Full.frontWhite}`);
+
+  // 2) Universal Sequence-Frame Aim Lock & Inter-Move Gap Turning across ALL weapons (blade, katana, greatsword, pistol)
+  const w = AI.createWorld(11);
+  const ag = w.agents[5];
+  ag.manual = true;
+  ag.goal = { type: 'manual' };
+
+  // 2a) Melee combo sequence lock + gap turning (test across blade, katana, greatsword)
+  for (const wepId of ['blade', 'katana', 'greatsword'] as const) {
+    w.setWeapon(ag, wepId);
+    w.input.attackHold = false;
+    // Aim right before starting combo1
+    w.aimAt(ag, ag.x + 90, ag.y - 16);
+    assert.equal(ag.face, 1, `Expected ${wepId} initial facing right (1)`);
+    const lockedAimRight = ag.aim;
+
+    // Launch combo1 -> sequence frames are now active!
+    assert.equal(w.swing(ag), 'combo1');
+    w.step(1 / 60);
+
+    // Move mouse sharply behind character to the LEFT and upward while combo1 sequence frames are playing
+    w.aimAt(ag, ag.x - 100, ag.y - 45);
+    assert.equal(ag.face, 1, `Expected ${wepId} NOT to turn during active combo1 sequence frames when mouse moves behind`);
+    assert.equal(ag.aim, lockedAimRight, `Expected ${wepId} aim angle (${ag.aim}) to stay 100% locked (${lockedAimRight}) during active combo1 frames`);
+
+    // Even pressing left movement key during active combo1 must NOT flip ag.face!
+    w.input.dir = -1;
+    let enteredGap = false;
+    for (let f = 0; f < 55; f++) {
+      const wasCombo1 = ag.wAction === 'combo1';
+      w.step(1 / 60);
+      if (ag.wAction === 'combo1') {
+        assert.equal(ag.face, 1, `Expected ${wepId} ag.face to remain locked to +1 on every single sequence frame of combo1 (tick ${f})`);
+        assert.equal(ag.aim, lockedAimRight, `Expected ${wepId} ag.aim to remain locked on every single sequence frame of combo1 (tick ${f})`);
+      } else if (wasCombo1 && ag.wAction === 'aim') {
+        enteredGap = true;
+        break;
+      }
+    }
+    w.input.dir = 0;
+    assert.ok(enteredGap, `Expected ${wepId} combo1 to finish and enter the inter-move gap ('aim')`);
+
+    // Immediately upon entering the inter-move gap, pendingAim MUST flush so character turns LEFT (-1) and updates aim!
+    assert.equal(ag.face, -1, `Expected ${wepId} to immediately turn to face mouse (-1) in the gap after combo1 finishes`);
+    assert.notEqual(ag.aim, lockedAimRight, `Expected ${wepId} aim angle to update to pending mouse position in the gap`);
+
+    // Moreover, clicking swing() inside the inter-move comboGraceT window chains into combo2 facing the NEW direction (-1), and locks again!
+    const nextAct = w.swing(ag);
+    assert.equal(nextAct, 'combo2', `Expected clicking during ${wepId} inter-combo gap window to chain smoothly into combo2`);
+    const lockedAimLeft = ag.aim;
+    // Now move mouse back to the RIGHT mid-combo2 -> must stay locked to LEFT (-1) until combo2 finishes!
+    w.aimAt(ag, ag.x + 110, ag.y - 10);
+    for (let f = 0; f < 8; f++) {
+      w.step(1 / 60);
+      if (ag.wAction === 'combo2') {
+        assert.equal(ag.face, -1, `Expected ${wepId} combo2 sequence frames to stay locked to left (-1) even when mouse moves right`);
+        assert.equal(ag.aim, lockedAimLeft, `Expected ${wepId} combo2 aim to stay locked during sequence frames`);
+      }
+    }
+    // Step until combo2 finishes -> turns back to RIGHT (+1) in the gap!
+    for (let f = 0; f < 60; f++) {
+      w.step(1 / 60);
+      if (ag.wAction === 'aim') break;
+    }
+    assert.equal(ag.face, 1, `Expected ${wepId} to turn back to right (+1) once combo2 sequence finishes`);
+  }
+
+  // 2b) Held attackHold chaining also turns cleanly ONLY at the exact inter-stage boundary (combo1 -> combo2), never mid-stage!
+  w.setWeapon(ag, 'blade');
+  w.aimAt(ag, ag.x + 80, ag.y - 16);
+  assert.equal(ag.face, 1);
+  w.input.attackHold = true;
+  w.step(1 / 60); // Starts combo1 facing +1
+  assert.equal(ag.wAction, 'combo1');
+  // Move mouse to the LEFT while holding attackHold during combo1
+  w.aimAt(ag, ag.x - 95, ag.y - 28);
+  let sawCombo2Left = false;
+  for (let f = 0; f < 40; f++) {
+    w.step(1 / 60);
+    if (ag.wAction === 'combo1') {
+      assert.equal(ag.face, 1, 'Expected held combo1 never to flip mid-sequence');
+    } else if (ag.wAction === 'combo2') {
+      assert.equal(ag.face, -1, 'Expected held combo1 -> combo2 boundary gap to flush pendingAim and turn to -1 for combo2');
+      sawCombo2Left = true;
+      break;
+    }
+  }
+  w.input.attackHold = false;
+  assert.ok(sawCombo2Left, 'Expected held attackHold to transition into combo2 facing the new mouse direction (-1)');
+  for (let f = 0; f < 45; f++) w.step(1 / 60);
+
+  // 2c) Ranged weapon ('pistol') also locks aim during 'shoot' & 'reload' sequence frames and turns in the gap!
+  w.setWeapon(ag, 'pistol');
+  w.aimAt(ag, ag.x + 80, ag.y - 16);
+  assert.equal(ag.face, 1);
+  const pistolAimRight = ag.aim;
+  assert.equal(w.shoot(ag), 'shoot');
+  assert.equal(ag.wAction, 'shoot');
+  w.aimAt(ag, ag.x - 80, ag.y - 35); // Move mouse left mid-shot recoil sequence
+  assert.equal(ag.face, 1, 'Expected pistol NOT to flip during active shoot sequence frames');
+  assert.equal(ag.aim, pistolAimRight, 'Expected pistol aim to remain locked during active shoot sequence frames');
+  for (let f = 0; f < 25; f++) {
+    w.step(1 / 60);
+    if (ag.wAction === 'shoot') {
+      assert.equal(ag.face, 1, 'Expected pistol face locked on every frame of shoot');
+    } else if (ag.wAction === 'aim') {
+      break;
+    }
+  }
+  assert.equal(ag.wAction, 'aim');
+  assert.equal(ag.face, -1, 'Expected pistol to turn to -1 immediately in the gap after shoot finishes');
+});
+
+test('25. Iron Dual Blades (dualBlades): true dual-wielding falcon scimitars, 45° rigid idle, zero clipping, reference-grounded 4-stage combo (Alternating Twin -> X-Scissor -> 360° Beyblade Spin -> Aerial Twin-Wing Rend), 16-frame sequential Demon Dance, and sequence-frame aim lock', () => {
+  // 1) Weapon config & keyframe tables
+  assert.ok(Rig.WEAPONS.dualBlades, 'Expected Rig.WEAPONS.dualBlades to be defined');
+  assert.equal(Rig.WEAPONS.dualBlades.comboCount, 4, 'Expected Dual Blades comboCount === 4');
+  assert.equal(Rig.WEAPONS.dualBlades.skillDur, 1.24, 'Expected Dual Blades Demon Dance skillDur === 1.24s');
+  assert.ok(Rig.DUAL_BLADES_ACT_KF, 'Expected Rig.DUAL_BLADES_ACT_KF to be exported');
+  for (const act of ['combo1', 'combo2', 'combo3', 'combo4']) {
+    assert.equal(Rig.DUAL_BLADES_ACT_KF[act].length, 8, `Expected ${act} to have 8 keyframes`);
+  }
+  assert.equal(Rig.DUAL_BLADES_ACT_KF.skill.length, 16, 'Expected Demon Dance skill to have 16 keyframes');
+
+  const xingSpec = Cast.CAST[5];
+  const P = Rig.poser(xingSpec);
+  const basePo = P.idleSide(0.2, false);
+
+  // 2) True dual-wielding in 45° standing idle: off-hand scimitar in backArm + main-hand scimitar in weapon, rigid vertical translation with po.bob
+  const scimitarSet = new Set([
+    '#ffffff', '#eef1f6', '#dce1eb', '#b8bfd0',
+    '#8a91a1', '#7d8494', '#686e7c', '#4a4f5c',
+    '#3a3f4d', '#323744', '#23262e', '#6e2b32',
+  ]);
+  let refMainRel = '';
+  let refOffRel = '';
+  for (let i = 0; i < 8; i++) {
+    const p = i / 8;
+    const po45 = P.weaponIdle('dualBlades', p * 2.4, false);
+    const ly: any = Rig.charLayers(xingSpec, po45, P.hyGround(po45), 0, {
+      weapon: { id: 'dualBlades', aim: 90, action: 'idle', p, v34: true },
+    });
+    const mainPts: string[] = [];
+    const offPts: string[] = [];
+    for (let r = 0; r < Rig.GH; r++) {
+      for (let c = 0; c < Rig.GW; c++) {
+        if (ly.weapon[r][c]) {
+          mainPts.push(`${r - (po45.bob || 0)},${c}`);
+        }
+        if (ly.backArm[r][c] && scimitarSet.has(ly.backArm[r][c])) {
+          offPts.push(`${r - (po45.bob || 0)},${c}`);
+        }
+      }
+    }
+    assert.ok(mainPts.length >= 16, `Expected >=16 main-hand falcon scimitar pixels in weapon layer on 45° idle frame ${i}, got ${mainPts.length}`);
+    assert.ok(offPts.length >= 12, `Expected >=12 off-hand falcon scimitar pixels in backArm layer on 45° idle frame ${i}, got ${offPts.length}`);
+    const mSig = mainPts.join(';');
+    const oSig = offPts.join(';');
+    if (i === 0) {
+      refMainRel = mSig;
+      refOffRel = oSig;
+    } else {
+      assert.equal(mSig, refMainRel, `Expected main-hand scimitar to translate rigidly with po.bob on 45° idle frame ${i}`);
+      assert.equal(oSig, refOffRel, `Expected off-hand scimitar to translate rigidly with po.bob on 45° idle frame ${i}`);
+    }
+  }
+
+  // 3) Zero clipping (all pixels strictly within 96×76 Inspector window r ∈ [20..95], c ∈ [0..95]) across combo1..4 & 16-frame skill on humans & aliens
+  const testSpecs = [
+    xingSpec,
+    Cast.generateAlienNPC('cathode', 2026),
+    Cast.generateAlienNPC('myco', 2027),
+    Cast.generateAlienNPC('cinder', 2028),
+  ];
+  for (const sp of testSpecs) {
+    const PS = Rig.poser(sp);
+    const poS = PS.idleSide(0.2, false);
+    for (const act of ['combo1', 'combo2', 'combo3', 'combo4']) {
+      for (let i = 0; i < 8; i++) {
+        const g = Rig.charGrid(sp, poS, PS.hyGround(poS), 0, {
+          weapon: { id: 'dualBlades', aim: 90, action: act, p: (i + 0.5) / 8 },
+        });
+        for (let r = 0; r < Rig.GH; r++) {
+          for (let c = 0; c < Rig.GW; c++) {
+            if (g[r][c]) {
+              assert.ok(r >= 20 && r <= 95, `Expected ${sp.id} dualBlades ${act} F${i} row=${r} within [20..95]`);
+              assert.ok(c >= 0 && c < Rig.GW, `Expected ${sp.id} dualBlades ${act} F${i} col=${c} within [0..${Rig.GW - 1}]`);
+            }
+          }
+        }
+      }
+    }
+    for (let i = 0; i < 16; i++) {
+      const g = Rig.charGrid(sp, poS, PS.hyGround(poS), 0, {
+        weapon: { id: 'dualBlades', aim: 90, action: 'skill', p: (i + 0.5) / 16 },
+      });
+      for (let r = 0; r < Rig.GH; r++) {
+        for (let c = 0; c < Rig.GW; c++) {
+          if (g[r][c]) {
+            assert.ok(r >= 20 && r <= 95, `Expected ${sp.id} dualBlades skill F${i} row=${r} within [20..95]`);
+            assert.ok(c >= 0 && c < Rig.GW, `Expected ${sp.id} dualBlades skill F${i} col=${c} within [0..${Rig.GW - 1}]`);
+          }
+        }
+      }
+    }
+  }
+
+  // 4) Reference motion fidelity:
+  //    - combo1: sequential alternating twin cuts (F2 off-hand diagonal down -> F3 half-retract -> F4 main-hand rising -> F5 frozen gunAng + half-retract)
+  const c1Hit1 = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo1', p: 0.28 });
+  const c1Ret1 = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo1', p: 0.42 });
+  const c1Hit2 = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo1', p: 0.56 });
+  const c1Ret2 = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo1', p: 0.70 });
+  assert.ok(c1Hit1.offTrailFrom != null && c1Hit1.trailFrom == null, 'Expected combo1 Hit 1 (p=0.28) to swing ONLY off-hand blade first');
+  assert.equal(c1Hit1.offAng, c1Ret1.offAng, 'Expected combo1 Hit 1 Beat 3 (p=0.42) to freeze off-hand blade while trail retracts');
+  assert.ok(c1Hit2.trailFrom != null && c1Hit2.offTrailFrom == null, 'Expected combo1 Hit 2 (p=0.56) to swing ONLY main-hand blade second');
+  assert.equal(c1Hit2.gunAng, c1Ret2.gunAng, 'Expected combo1 Hit 2 Beat 3 (p=0.70) to freeze main-hand blade while trail retracts');
+
+  //    - combo2: Elden Ring powerstanced scimitars 'X' Scissor Cross-Slash (both blades swing simultaneously & freeze on Beat 3)
+  const c2Peak = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo2', p: 0.28 });
+  const c2Ret = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo2', p: 0.56 });
+  assert.ok(c2Peak.trailFrom != null && c2Peak.offTrailFrom != null, 'Expected combo2 X-Scissor Cross-Slash to swing both curved blades simultaneously');
+  assert.equal(c2Peak.gunAng, c2Ret.gunAng, 'Expected combo2 Beat 3 to freeze main-hand blade');
+  assert.equal(c2Peak.offAng, c2Ret.offAng, 'Expected combo2 Beat 3 to freeze off-hand blade');
+
+  //    - combo3: MH Beyblade 360° spin (spinFlip: true on F2 -> false on F3, wrapping rear vortex in backArm & front vortex in weapon)
+  assert.equal(Rig.DUAL_BLADES_ACT_KF.combo3[2].spinFlip, true, 'Expected combo3 F2 to flip character for 360° spinning rush');
+  assert.equal(Rig.DUAL_BLADES_ACT_KF.combo3[3].spinFlip, false, 'Expected combo3 F3 to complete 360° turn back forward');
+  const lySpin: any = Rig.charLayers(xingSpec, basePo, P.hyGround(basePo), 0, {
+    weapon: { id: 'dualBlades', aim: 90, action: 'combo3', p: 0.42 },
+  });
+  let spinRearPx = 0, spinFrontWhite = 0;
+  for (let r = 0; r < Rig.GH; r++) {
+    for (let c = 0; c < Rig.GW; c++) {
+      if (['#b8bfd0', '#9aa1b0', '#dce1eb'].includes(lySpin.backArm[r][c])) spinRearPx++;
+      if (['#ffffff', '#eef1f6'].includes(lySpin.weapon[r][c])) spinFrontWhite++;
+    }
+  }
+  assert.ok(spinRearPx >= 12, `Expected combo3 360° vortex to render >=12 rear ring pixels in backArm, got ${spinRearPx}`);
+  assert.ok(spinFrontWhite >= 20, `Expected combo3 360° vortex to render >=20 bright front ring pixels in weapon, got ${spinFrontWhite}`);
+
+  //    - combo4: Aerial hop (hopY > 0 on F1..F2) -> heavy twin-wing rend (p=0.42 -> frozen half-retract p=0.70)
+  assert.ok(Rig.DUAL_BLADES_ACT_KF.combo4[1].hopY >= 3 && Rig.DUAL_BLADES_ACT_KF.combo4[2].hopY >= 4, 'Expected combo4 F1..F2 to hop into air');
+  const c4Peak = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo4', p: 0.42 });
+  const c4Ret = Rig.computeWeaponPose({ id: 'dualBlades', aim: 90, action: 'combo4', p: 0.70 });
+  assert.equal(c4Peak.gunAng, c4Ret.gunAng, 'Expected combo4 Beat 3 to freeze main-hand blade');
+  assert.equal(c4Peak.offAng, c4Ret.offAng, 'Expected combo4 Beat 3 to freeze off-hand blade');
+
+  //    - skill (Demon Dance): 4 strictly sequential non-stacking slashes (F2->F3, F4->F5, F6->F7, F8[spinFlip]->F9) + F10..F12 synchronized X finisher!
+  assert.equal(Rig.DUAL_BLADES_ACT_KF.skill[8].spinFlip, true, 'Expected Demon Dance F8 to trigger spinFlip during 4th spinning slash');
+  const countDanceBright = (fIdx: number) => {
+    const ly: any = Rig.charLayers(xingSpec, basePo, P.hyGround(basePo), 0, {
+      weapon: { id: 'dualBlades', aim: 90, action: 'skill', p: (fIdx + 0.5) / 16 },
+    });
+    let cnt = 0;
+    for (let r = 0; r < Rig.GH; r++) {
+      for (let c = 0; c < Rig.GW; c++) {
+        if (ly.weapon[r][c] === '#ffffff' || ly.weapon[r][c] === '#eef1f6') cnt++;
+      }
+    }
+    return cnt;
+  };
+  assert.ok(countDanceBright(3) < countDanceBright(2), 'Expected Demon Dance Slash #1 to retract on F3 before Slash #2 appears on F4');
+  assert.ok(countDanceBright(5) < countDanceBright(4), 'Expected Demon Dance Slash #2 to retract on F5 before Slash #3 appears on F6');
+  assert.ok(countDanceBright(7) < countDanceBright(6), 'Expected Demon Dance Slash #3 to retract on F7 before Slash #4 appears on F8');
+  assert.ok(countDanceBright(10) >= 28, 'Expected Demon Dance F10 grand X finisher to burst with >=28 bright pixels');
+
+  // 5) Live AI World Simulation: 7-hit 4-stage combo, 5-hit Demon Dance skill, mid-combo release -> 45° idle, and sequence-frame aim lock
+  const w = AI.createWorld(11);
+  const ag = w.agents[5];
+  ag.manual = true;
+  ag.goal = { type: 'manual' };
+  w.setWeapon(ag, 'dualBlades');
+  w.aimAt(ag, ag.x + 80, ag.y - 16);
+  w.summonDummyNear(ag);
+  const dummy = w.dummies[0];
+  dummy.x = ag.x + 22;
+  dummy.y = ag.y;
+
+  // Hold attackHold through full 4-stage combo -> combo1(2) + combo2(2) + combo3(2) + combo4(1) = 7 hits!
+  w.input.attackHold = true;
+  const seenComboActs = new Set<string>();
+  for (let f = 0; f < 130; f++) {
+    dummy.x = ag.x + 22; // Keep dummy within reach as agent lunges
+    w.step(1 / 60);
+    if (ag.wAction && ag.wAction.startsWith('combo')) seenComboActs.add(ag.wAction);
+    if (seenComboActs.size === 4 && ag.wAction === 'combo4' && ag.wT > 0.25) break;
+  }
+  w.input.attackHold = false;
+  for (let f = 0; f < 30; f++) w.step(1 / 60);
+  assert.deepEqual([...seenComboActs], ['combo1', 'combo2', 'combo3', 'combo4'], 'Expected held attackHold to chain all 4 Dual Blades combo stages');
+  assert.ok(dummy.comboHits >= 7, `Expected full 4-stage Dual Blades combo to land >=7 multi-hits on dummy, got ${dummy.comboHits}`);
+
+  // Mid-combo mouse release returns directly to 45° standing idle without playing extra recovery frame
+  w.aimAt(ag, ag.x + 80, ag.y - 16);
+  assert.equal(w.swing(ag), 'combo1');
+  w.input.attackHold = false;
+  let returnedDirectIdle = false;
+  for (let f = 0; f < 25; f++) {
+    w.step(1 / 60);
+    if (ag.wAction === 'aim') {
+      const fp = AI.framePose(ag);
+      assert.equal(fp.weapon.action, 'idle', 'Expected mid-combo mouse release on Dual Blades to return directly to 45° idle');
+      assert.equal(fp.weapon.v34, true, 'Expected mid-combo mouse release on Dual Blades to use v34=true 45° idle');
+      returnedDirectIdle = true;
+      break;
+    }
+  }
+  assert.ok(returnedDirectIdle, 'Expected Dual Blades combo1 release to return directly to idle');
+
+  // Right-click Demon Dance skill lands 5 sequential multi-hits (4 rapid slashes + 1 heavy X finisher) and locks aim mid-sequence!
+  dummy.comboHits = 0;
+  dummy.x = ag.x + 22;
+  dummy.y = ag.y;
+  w.aimAt(ag, ag.x + 80, ag.y - 16);
+  assert.equal(ag.face, 1);
+  assert.equal(w.skill(ag), 'skill');
+  // Move mouse behind character to the LEFT during active Demon Dance sequence frames -> must stay locked to +1 until skill finishes!
+  w.aimAt(ag, ag.x - 100, ag.y - 30);
+  for (let f = 0; f < 95; f++) {
+    dummy.x = ag.x + 22;
+    w.step(1 / 60);
+    if (ag.wAction === 'skill') {
+      assert.equal(ag.face, 1, `Expected Dual Blades Demon Dance sequence frames to lock facing (+1) on tick ${f}`);
+    } else if (ag.wAction === 'aim') {
+      break;
+    }
+  }
+  assert.equal(dummy.comboHits, 5, `Expected Dual Blades Demon Dance skill to land 5 sequential multi-hits on dummy, got ${dummy.comboHits}`);
+  assert.equal(ag.face, -1, 'Expected Dual Blades to turn to pending mouse direction (-1) immediately in the gap after Demon Dance finishes');
+});
+
+
 

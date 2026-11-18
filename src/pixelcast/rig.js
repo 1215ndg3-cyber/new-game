@@ -6,13 +6,13 @@
   else root.PixelRig = factory();
 })(typeof globalThis !== 'undefined' ? globalThis : (typeof self !== 'undefined' ? self : this), function () {
   'use strict';
-  const GW = 80, GH = 80, GOFF = 30, GX = 20, FOOT = 45, SHY = 35;
+  const GW = 96, GH = 108, GOFF = 30, GX = 28, FOOT = 45, SHY = 35;
   const rad = d => d * Math.PI / 180;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   const SKELETON = {
     note: '像素人物通用骨架。角度以垂直向下为0，朝前为正，单位度；默认朝右，镜像得到朝左。',
-    grid: { width: GW, height: GH, rowOffset: GOFF, colOffset: GX, footRow: FOOT, standingHipRow: SHY, spriteCell: [80, 48] },
+    grid: { width: GW, height: GH, rowOffset: GOFF, colOffset: GX, footRow: FOOT, standingHipRow: SHY, spriteCell: [96, 76] },
     defaultBuild: { thigh: 6, shin: 5, upper: 3, fore: 3 },
     bones: [
       { name: 'pelvis', parent: null, note: '根骨骼，髋关节在 列15.5(+GX=19.5)、行hy，骨盆2行' },
@@ -3406,13 +3406,13 @@
       name: '铁质长剑',
       archetype: 'sword',
       type: 'melee',
-      grip: 'hybrid', // 1段单手屈肘横斩，2-3段与剑气技能双手握持发力
+      grip: 'hybrid', // 1/4段灵巧单手直斩突刺，2/3段双手挥砍，右键拈剑诀挽千瓣剑花
       clip: 0,
-      comboCount: 3,
-      comboDurs: [0.42, 0.44, 0.54],
-      skillDur: 0.76,
-      comboNames: ['一段·踏步横斩', '二段·斜撩上挑', '三段·举顶下劈'],
-      skillName: '秘技·蓄力剑气',
+      comboCount: 4,
+      comboDurs: [0.36, 0.34, 0.42, 0.44],
+      skillDur: 1.28,
+      comboNames: ['一段·疾风平斩', '二段·掠月斜上挑', '三段·裂空斜下劈', '四段·回风贯日刺'],
+      skillName: '秘技·流云连环剑花',
     },
     katana: {
       id: 'katana',
@@ -3434,80 +3434,118 @@
       type: 'melee',
       grip: '2h',
       clip: 0,
-      comboCount: 2,
-      comboDurs: [0.62, 0.72],
-      skillDur: 0.86,
-      comboNames: ['一段·肩扛卸力·拖地狂风上撩斩', '二段·狮子奋迅·过肩蓄力崩地重砸'],
-      skillName: '秘技·霸体沉肩·裂地重击斩',
+      comboCount: 4,
+      comboDurs: [0.58, 0.54, 0.68, 0.78],
+      skillDur: 1.16,
+      comboNames: [
+        '一段·肩扛卸力·拖地狂风上撩斩',
+        '二段·扭腰拧胯·千钧破阵平扫斩',
+        '三段·狮子奋迅·过肩蓄力崩地重砸',
+        '四段·霸王风暴·360°重剑大回旋斩',
+      ],
+      skillName: '战技·勇猛狮子斩 (跃起360°空翻二连斩)',
     },
-    // 武器模组元数据（剑、长刀、大剑、枪、戟、盾）
+    dualBlades: {
+      id: 'dualBlades',
+      name: '铁质双刀',
+      archetype: 'dualBlades',
+      type: 'melee',
+      grip: 'dual',
+      clip: 0,
+      comboCount: 4,
+      comboDurs: [0.30, 0.30, 0.34, 0.44],
+      skillDur: 1.24,
+      comboNames: [
+        '一段·鬼人突进·交替二连斜斩',
+        '二段·猎鹰反手·剪刀十字交叉斩',
+        '三段·旋风陀螺·360°双刃回旋斩',
+        '四段·飞身双翼·腾空十字撕裂斩',
+      ],
+      skillName: '秘技·鬼人乱舞 (交刃蓄势+四连疾斩依次出现+终结十字裂空)',
+    },
+    // 武器模组元数据（剑、双刀、长刀、大剑、枪、戟、盾）
     MODULES: {
-      sword: { id: 'sword', name: '剑模组 (单/双手)', comboCount: 3, lmb: '三连击：踏步横斩 → 斜撩上挑 → 举顶下劈', rmb: '蓄力剑气斩' },
+      sword: { id: 'sword', name: '剑模组 (修长直剑·四段连招+连环剑花)', comboCount: 4, skillDur: 1.28, lmb: '四连击：疾风平斩 → 掠月斜上挑 → 裂空斜下劈 → 回风贯日刺', rmb: '秘技·流云连环剑花 (四道3D刀光依次出现+旋身定星)' },
+      dualBlades: { id: 'dualBlades', name: '双刀模组 (猎鹰双曲剑·四段连击+鬼人乱舞)', comboCount: 4, skillDur: 1.24, lmb: '四连疾斩：交替二连斜斩 → 剪刀十字交叉斩 → 360°陀螺回旋斩 → 飞身双翼撕裂斩', rmb: '秘技·鬼人乱舞 (交刃蓄势 → 四道疾风刀光依次出现 → 终结十字裂空双斩)' },
       katana: { id: 'katana', name: '长刀模组 (横扫+极速二连+大上段)', comboCount: 4, lmb: '四连击：拔刀向前横扫(3D扁月牙) → 极速斜上挑 → 极速斜下劈 → 大上段重下劈', rmb: '鞘口吸引粒子·星爆·独立图层半周三连环斩' },
-      greatsword: { id: 'greatsword', name: '大剑模组 (肩扛巨刃·二段重武)', comboCount: 2, lmb: '二连重击：肩扛拖地狂风上撩 → 狮子奋迅过肩崩地重砸', rmb: '霸体沉肩·裂地重击斩' },
+      greatsword: { id: 'greatsword', name: '大剑模组 (肩扛巨刃·四段大回旋重武)', comboCount: 4, lmb: '四连重击：拖地狂风上撩 → 扭腰千钧平扫 → 狮子奋迅重砸 → 360°重剑大回旋斩', rmb: '勇猛狮子斩：跃起360°前空翻连斩两次' },
       spear: { id: 'spear', name: '枪模组 (双手长柄)', comboCount: 3, lmb: '中平连刺 → 挑杀', rmb: '龙牙突进' },
       halberd: { id: 'halberd', name: '戟模组 (双手重武)', comboCount: 3, lmb: '横扫千军 → 裂地劈', rmb: '霸王回旋震' },
       shield: { id: 'shield', name: '盾模组 (单手防反)', comboCount: 3, lmb: '盾击连打', rmb: '举盾格挡反击' },
     }
   };
 
-  /* 统一近战上半身专属 8 帧步进库 (SWORD_ACT_KF / KATANA_ACT_KF / GREATSWORD_ACT_KF)：
+  /* 统一近战上半身专属步进库 (SWORD_ACT_KF / KATANA_ACT_KF / GREATSWORD_ACT_KF)：
    * 角度换算说明：内部 gunAng 以垂直向下为 0°、正前方水平为 90°、头顶正上方为 180°；
-   * 若以正前方水平为 0°（向下为正、向上/向后为负，即 userAng = 90° - gunAng），则：
-   * - 头顶偏后 (-110°) 对应 gunAng = 200°；
-   * - 身前下方 (+60°)  对应 gunAng = 30°；
-   * - 头顶上方 (-80°)  对应 gunAng = 170°；
-   * - 正前方水平 (0°)  对应 gunAng = 90°；
-   * - 背后深拉 (-150°) 对应 gunAng = 240°；
-   * - 正前方地面 (+85°) 对应 gunAng = 5°；
-   * - 头顶正上方 (-90°) 对应 gunAng = 180°。 */
+   * 修长对称双刃铁质长剑 (17.5px) 严格遵循「三拍打击定律」：
+   *   Beat 1 (前摇引剑) → Beat 2 (瞬间到位+适配17.5px剑尖的3D满刀光) → Beat 3 (长剑定格不动+刀光收回一半)。
+   *   右键秘技「流云千瓣剑花」采用 16 帧长序列，挽出前后包抄的 3D 双环 ∞ 剑影、旋身背挽与剑诀横剑定星！ */
   const SWORD_ACT_KF = {
-    // 一段·向前横斩 (0.42s · 基础8帧)：屈肘深拉于背后(-118°) → 爆发 >200° 环腰大弧向前水平横斩(88°→94°) → 沉肘归位
+    // 一段·疾风平斩 (0.36s · 8帧三拍)：屈肘深拉于背后(-118°) → 瞬间水平爆发满月横扫(90°) → 剑身定格90°不动+3D扁月牙刀光收半 → 收势
     combo1: [
-      { p: 0.00, nl: [-8, -20],  fl: [20, -14],  lean: 0,  bob: 0, head: [0, 0],  tail: [32, 58], na: [-52, -100], fa: [24, 70],   gunAng: -110, bladeScale: 1.0, trailFrom: null, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.14, nl: [-14, -24], fl: [24, -16],  lean: -1, bob: 0, head: [-1, 0], tail: [36, 64], na: [-60, -108], fa: [28, 74],   gunAng: -118, bladeScale: 1.0, trailFrom: null, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.28, nl: [20, -20],  fl: [-18, -22], lean: 1,  bob: 0, head: [1, 0],  tail: [24, 46], na: [34, 82],    fa: [-14, 34],  gunAng: 88,   bladeScale: 1.0, trailFrom: -118, shoulderDx: 1, shoulderDy: 0 },
-      { p: 0.42, nl: [36, -22],  fl: [-28, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [18, 34], na: [46, 90],    fa: [-22, 26],  gunAng: 90,   bladeScale: 1.0, trailFrom: -110, shoulderDx: 1, shoulderDy: 0 },
-      { p: 0.56, nl: [40, -24],  fl: [-32, -28], lean: 1,  bob: 0, head: [1, 0],  tail: [14, 28], na: [50, 94],    fa: [-26, 22],  gunAng: 94,   bladeScale: 1.0, trailFrom: -92,  shoulderDx: 1, shoulderDy: 0 },
-      { p: 0.70, nl: [34, -22],  fl: [-26, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [18, 36], na: [38, 84],    fa: [-18, 26],  gunAng: 88,   bladeScale: 1.0, trailFrom: -54,  shoulderDx: 1, shoulderDy: 0 },
-      { p: 0.84, nl: [26, -20],  fl: [-20, -22], lean: 0,  bob: 0, head: [0, 0],  tail: [24, 44], na: [24, 70],    fa: [-12, 30],  gunAng: 80,   bladeScale: 1.0, trailFrom: null, shoulderDx: 0, shoulderDy: 0 },
-      { p: 1.00, nl: [18, -18],  fl: [-14, -20], lean: 0,  bob: 0, head: [0, 0],  tail: [28, 50], na: [14, 58],    fa: [-6, 34],   gunAng: 72,   bladeScale: 1.0, trailFrom: null, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.00, nl: [-8, -20],  fl: [20, -14],  lean: 0,  bob: 0, head: [0, 0],  tail: [32, 58], na: [-52, -100], fa: [24, 70],    gunAng: -110, bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.14, nl: [-14, -24], fl: [24, -16],  lean: -1, bob: 0, head: [-1, 0], tail: [36, 64], na: [-60, -108], fa: [28, 74],    gunAng: -118, bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.28, nl: [34, -22],  fl: [-28, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [18, 34], na: [46, 90],    fa: [-22, 26],   gunAng: 90,   bladeScale: 1.0, trailFrom: -118, slashRetract: 0.0,  slashType: 'swordHoriz3D', shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.42, nl: [38, -22],  fl: [-30, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [16, 30], na: [46, 90],    fa: [-22, 26],   gunAng: 90,   bladeScale: 1.0, trailFrom: -118, slashRetract: 0.06, slashType: 'swordHoriz3D', shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.56, nl: [38, -22],  fl: [-30, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [16, 30], na: [46, 90],    fa: [-22, 26],   gunAng: 90,   bladeScale: 1.0, trailFrom: -40,  slashRetract: 0.50, slashType: 'swordHoriz3D', shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.70, nl: [34, -22],  fl: [-26, -24], lean: 1,  bob: 0, head: [1, 0],  tail: [18, 36], na: [46, 90],    fa: [-22, 26],   gunAng: 90,   bladeScale: 1.0, trailFrom: 16,   slashRetract: 0.78, slashType: 'swordHoriz3D', shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.84, nl: [26, -20],  fl: [-20, -22], lean: 0,  bob: 0, head: [0, 0],  tail: [24, 44], na: [32, 78],    fa: [-14, 30],   gunAng: 82,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           shoulderDx: 0, shoulderDy: 0 },
+      { p: 1.00, nl: [18, -18],  fl: [-14, -20], lean: 0,  bob: 0, head: [0, 0],  tail: [28, 50], na: [18, 64],    fa: [-8, 34],    gunAng: 74,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           shoulderDx: 0, shoulderDy: 0 },
     ],
-    // 二段·斜撩上挑 (0.44s · 基础8帧)：屈肘深压于身后下方(-76°) → 爆发 >200° 大弧斜撩越过头顶至脑后(204°) → 高位长弧收势
+    // 二段·掠月斜上挑 (0.34s · 8帧三拍)：屈肘低垂引刃(-78°) → 瞬间斜撩越顶至204°满刀光 → 剑身定格204°不动+刀光收半 → 高位衔接
     combo2: [
-      { p: 0.00, nl: [28, -30],  fl: [-18, -30], lean: 0,  bob: 0, head: [0, 1],  tail: [28, 52], na: [-26, -74],  fa: [-18, -64], gunAng: -68,  bladeScale: 1.0, trailFrom: null, twoHand: true, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.14, nl: [32, -34],  fl: [-22, -34], lean: 1,  bob: 1, head: [1, 1],  tail: [30, 56], na: [-32, -82],  fa: [-24, -72], gunAng: -76,  bladeScale: 1.0, trailFrom: null, twoHand: true, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.28, nl: [30, -24],  fl: [-24, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [34, 60], na: [44, 100],   fa: [32, 86],   gunAng: 108,  bladeScale: 1.0, trailFrom: -76,  twoHand: true, shoulderDx: 1, shoulderDy: 0 },
-      { p: 0.42, nl: [24, -14],  fl: [-28, -20], lean: 0,  bob: 0, head: [0, -1], tail: [40, 68], na: [112, 168],  fa: [98, 154],  gunAng: 186,  bladeScale: 1.0, trailFrom: -38,  twoHand: true, shoulderDx: 1, shoulderDy: -1 },
-      { p: 0.56, nl: [20, -10],  fl: [-30, -16], lean: -1, bob: 0, head: [0, -1], tail: [44, 74], na: [134, 190],  fa: [120, 176], gunAng: 204,  bladeScale: 1.0, trailFrom: 12,   twoHand: true, shoulderDx: 0, shoulderDy: -1 },
-      { p: 0.70, nl: [22, -12],  fl: [-26, -18], lean: -1, bob: 0, head: [0, -1], tail: [42, 70], na: [124, 180],  fa: [110, 166], gunAng: 194,  bladeScale: 1.0, trailFrom: 68,   twoHand: true, shoulderDx: 0, shoulderDy: -1 },
-      { p: 0.84, nl: [24, -16],  fl: [-22, -20], lean: 0,  bob: 0, head: [0, 0],  tail: [36, 62], na: [98, 154],   fa: [84, 140],  gunAng: 164,  bladeScale: 1.0, trailFrom: null, twoHand: true, shoulderDx: 0, shoulderDy: 0 },
-      { p: 1.00, nl: [26, -20],  fl: [-18, -22], lean: 0,  bob: 0, head: [0, 0],  tail: [32, 58], na: [78, 134],   fa: [64, 120],  gunAng: 144,  bladeScale: 1.0, trailFrom: null, twoHand: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.00, nl: [28, -30],  fl: [-18, -30], lean: 0,  bob: 0, head: [0, 1],  tail: [28, 52], na: [-26, -74],  fa: [-18, -64],  gunAng: -68,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.14, nl: [32, -34],  fl: [-22, -34], lean: 1,  bob: 1, head: [1, 1],  tail: [30, 56], na: [-32, -82],  fa: [-24, -72],  gunAng: -78,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.28, nl: [22, -12],  fl: [-28, -18], lean: -1, bob: 0, head: [0, -1], tail: [42, 70], na: [134, 190],  fa: [120, 176],  gunAng: 204,  bladeScale: 1.0, trailFrom: -78,  slashRetract: 0.0,  slashType: 'swordUp3D',    twoHand: true, shoulderDx: 1, shoulderDy: -1 },
+      { p: 0.42, nl: [20, -10],  fl: [-30, -16], lean: -1, bob: 0, head: [0, -1], tail: [44, 74], na: [134, 190],  fa: [120, 176],  gunAng: 204,  bladeScale: 1.0, trailFrom: -78,  slashRetract: 0.08, slashType: 'swordUp3D',    twoHand: true, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.56, nl: [20, -10],  fl: [-30, -16], lean: -1, bob: 0, head: [0, -1], tail: [44, 74], na: [134, 190],  fa: [120, 176],  gunAng: 204,  bladeScale: 1.0, trailFrom: 12,   slashRetract: 0.50, slashType: 'swordUp3D',    twoHand: true, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.70, nl: [22, -12],  fl: [-26, -18], lean: -1, bob: 0, head: [0, -1], tail: [42, 70], na: [134, 190],  fa: [120, 176],  gunAng: 204,  bladeScale: 1.0, trailFrom: 96,   slashRetract: 0.78, slashType: 'swordUp3D',    twoHand: true, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.84, nl: [24, -16],  fl: [-22, -20], lean: 0,  bob: 0, head: [0, 0],  tail: [36, 62], na: [118, 174],  fa: [104, 160],  gunAng: 188,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 1.00, nl: [26, -20],  fl: [-18, -22], lean: 0,  bob: 0, head: [0, 0],  tail: [32, 58], na: [108, 164],  fa: [94, 150],   gunAng: 176,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: true, shoulderDx: 0, shoulderDy: 0 },
     ],
-    // 三段·举顶下劈 (0.54s · 基础8帧)：双手举剑过顶并向后仰 36°(gunAng=216°) → 沿头顶至地面拉出 198° 满月长拖尾重劈(18°) → 震地收势
+    // 三段·裂空斜下劈 (0.42s · 8帧三拍)：双手举剑过顶后仰36°(216°) → 瞬间裂空斩落至24°满刀光+剑尖激波 → 剑身定格24°不动+刀光收半 → 蓄势待刺
     combo3: [
-      { p: 0.00, nl: [28, -22],  fl: [-20, -24], lean: 0,  bob: 0, head: [0, -1], tail: [36, 62], na: [124, 180],  fa: [112, 168], gunAng: 192,  bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 1, shoulderDx: 0, shoulderDy: -1 },
-      { p: 0.14, nl: [32, -28],  fl: [-22, -28], lean: -1, bob: 0, head: [-1, -1],tail: [42, 70], na: [136, 192],  fa: [124, 180], gunAng: 210,  bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 1, shoulderDx: 0, shoulderDy: -1 },
-      { p: 0.28, nl: [34, -32],  fl: [-24, -30], lean: -1, bob: 0, head: [-1, -1],tail: [46, 76], na: [144, 200],  fa: [132, 188], gunAng: 216,  bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 2, shoulderDx: 0, shoulderDy: -1 },
-      { p: 0.42, nl: [36, -26],  fl: [-28, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [26, 48], na: [42, 98],    fa: [28, 84],   gunAng: 86,   bladeScale: 1.0, trailFrom: 216,  twoHand: true, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
-      { p: 0.56, nl: [42, -30],  fl: [-34, -30], lean: 1,  bob: 1, head: [1, 1],  tail: [16, 30], na: [2, 48],     fa: [-6, 38],   gunAng: 20,   bladeScale: 1.0, trailFrom: 216,  twoHand: true, chargeLv: 2, shoulderDx: 1, shoulderDy: 0, slamBurst: 0.9 },
-      { p: 0.70, nl: [44, -32],  fl: [-36, -32], lean: 1,  bob: 1, head: [1, 1],  tail: [14, 26], na: [0, 46],     fa: [-8, 36],   gunAng: 18,   bladeScale: 1.0, trailFrom: 204,  twoHand: true, chargeLv: 2, shoulderDx: 1, shoulderDy: 0, slamBurst: 1.0 },
-      { p: 0.84, nl: [38, -28],  fl: [-30, -28], lean: 1,  bob: 0, head: [1, 0],  tail: [18, 34], na: [6, 52],     fa: [-4, 42],   gunAng: 32,   bladeScale: 1.0, trailFrom: 96,   twoHand: true, chargeLv: 1, shoulderDx: 1, shoulderDy: 0, slamBurst: 0.4 },
-      { p: 1.00, nl: [28, -22],  fl: [-20, -24], lean: 0,  bob: 0, head: [0, 0],  tail: [24, 46], na: [14, 62],    fa: [4, 50],    gunAng: 62,   bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 0, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.00, nl: [28, -22],  fl: [-20, -24], lean: 0,  bob: 0, head: [0, -1], tail: [36, 62], na: [126, 182],  fa: [114, 170],  gunAng: 196,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: true, chargeLv: 1, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.14, nl: [32, -28],  fl: [-22, -28], lean: -1, bob: 0, head: [-1, -1],tail: [42, 70], na: [136, 192],  fa: [124, 180],  gunAng: 210,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: true, chargeLv: 1, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.28, nl: [34, -32],  fl: [-24, -30], lean: -1, bob: 0, head: [-1, -1],tail: [46, 76], na: [144, 200],  fa: [132, 188],  gunAng: 216,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: true, chargeLv: 2, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.42, nl: [42, -30],  fl: [-34, -30], lean: 1,  bob: 0, head: [1, 1],  tail: [16, 30], na: [12, 56],    fa: [2, 46],     gunAng: 24,   bladeScale: 1.0, trailFrom: 216,  slashRetract: 0.0,  slashType: 'swordCleave3D', twoHand: true, chargeLv: 2, shoulderDx: 1, shoulderDy: 0, slamBurst: 1.0 },
+      { p: 0.56, nl: [44, -32],  fl: [-36, -32], lean: 1,  bob: 0, head: [1, 1],  tail: [14, 26], na: [12, 56],    fa: [2, 46],     gunAng: 24,   bladeScale: 1.0, trailFrom: 216,  slashRetract: 0.10, slashType: 'swordCleave3D', twoHand: true, chargeLv: 2, shoulderDx: 1, shoulderDy: 0, slamBurst: 1.0 },
+      { p: 0.70, nl: [44, -32],  fl: [-36, -32], lean: 1,  bob: 0, head: [1, 1],  tail: [14, 26], na: [12, 56],    fa: [2, 46],     gunAng: 24,   bladeScale: 1.0, trailFrom: 118,  slashRetract: 0.52, slashType: 'swordCleave3D', twoHand: true, chargeLv: 1, shoulderDx: 1, shoulderDy: 0, slamBurst: 0.55 },
+      { p: 0.84, nl: [36, -26],  fl: [-28, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [20, 38], na: [16, 62],    fa: [6, 50],     gunAng: 36,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: true, chargeLv: 0, shoulderDx: 1, shoulderDy: 0 },
+      { p: 1.00, nl: [28, -22],  fl: [-20, -24], lean: 0,  bob: 0, head: [0, 0],  tail: [24, 46], na: [18, 66],    fa: [8, 54],     gunAng: 56,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: true, chargeLv: 0, shoulderDx: 0, shoulderDy: 0 },
     ],
-    // 右键秘技·蓄力剑气 (0.76s · 基础8帧)：屈肘深收于腰后蓄力(-76°) → 爆发 >190° 大幅挥斩释放冷铁剑气波(116°→158°) → 稳姿收剑
+    // 四段终结·回风贯日刺 (0.44s · 8帧三拍)：收剑肋下聚芒(88°) → 爆发水平贯日突刺(90°)+双层3D螺旋风环剑枪 → 剑定格不动风环收半 → 归位
+    combo4: [
+      { p: 0.00, nl: [20, -22],  fl: [-16, -20], lean: -1, bob: 0, head: [0, 0],  tail: [34, 60], na: [-58, -14],  fa: [24, 72],    gunAng: 84,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, chargeLv: 1, shoulderDx: -1, shoulderDy: 0 },
+      { p: 0.14, nl: [16, -24],  fl: [-12, -18], lean: -1, bob: 0, head: [0, 0],  tail: [38, 66], na: [-68, -22],  fa: [32, 82],    gunAng: 88,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, chargeLv: 2, shoulderDx: -1, shoulderDy: 0 },
+      { p: 0.28, nl: [44, -26],  fl: [-36, -30], lean: 1,  bob: 0, head: [1, 0],  tail: [14, 28], na: [48, 92],    fa: [-36, -82],  gunAng: 90,   bladeScale: 1.0, trailFrom: 30,   slashRetract: 0.0,  slashType: 'swordThrust3D', twoHand: false, chargeLv: 2, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.42, nl: [46, -26],  fl: [-38, -32], lean: 1,  bob: 0, head: [1, 0],  tail: [12, 24], na: [48, 92],    fa: [-36, -82],  gunAng: 90,   bladeScale: 1.0, trailFrom: 30,   slashRetract: 0.08, slashType: 'swordThrust3D', twoHand: false, chargeLv: 2, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.56, nl: [46, -26],  fl: [-38, -32], lean: 1,  bob: 0, head: [1, 0],  tail: [12, 24], na: [48, 92],    fa: [-36, -82],  gunAng: 90,   bladeScale: 1.0, trailFrom: 54,   slashRetract: 0.50, slashType: 'swordThrust3D', twoHand: false, chargeLv: 1, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.70, nl: [42, -24],  fl: [-34, -28], lean: 1,  bob: 0, head: [1, 0],  tail: [16, 32], na: [48, 92],    fa: [-36, -82],  gunAng: 90,   bladeScale: 1.0, trailFrom: 70,   slashRetract: 0.78, slashType: 'swordThrust3D', twoHand: false, chargeLv: 0, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.84, nl: [30, -22],  fl: [-24, -24], lean: 0,  bob: 0, head: [0, 0],  tail: [22, 42], na: [30, 76],    fa: [-20, 26],   gunAng: 82,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, chargeLv: 0, shoulderDx: 0,  shoulderDy: 0 },
+      { p: 1.00, nl: [20, -18],  fl: [-16, -20], lean: 0,  bob: 0, head: [0, 0],  tail: [28, 50], na: [16, 62],    fa: [-8, 34],    gunAng: 72,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, chargeLv: 0, shoulderDx: 0,  shoulderDy: 0 },
+    ],
+    // 右键秘技·流云连环剑花 (1.28s · 16帧从容长序列 · 四道 3D 刀光严格依次出现、前消后现)：
+    // 拈指立剑诀(F0-F1) → 【第1道：斜上挽花】(F2满光→F3收半) → 【第2道：反腕斜下掠花】(F4满光→F5收半) → 【第3道：旋身绕背平环】(F6转身起势→F7回身满月→F8收半→F9撤剑蓄力) → 【第4道：横剑破空定星】(F10-F11横剑92°满光→F12剑不动刀光收半→F13余丝渐隐) → 敛锋归位(F14-F15)
     skill: [
-      { p: 0.00, nl: [24, -24],  fl: [-18, -20], lean: 0,  bob: 0, head: [1, 0],  tail: [34, 60], na: [-18, -62],  fa: [-10, -52], gunAng: -56,  bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 1, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.14, nl: [28, -28],  fl: [-22, -22], lean: -1, bob: 0, head: [1, 0],  tail: [38, 66], na: [-22, -68],  fa: [-14, -58], gunAng: -64,  bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 1, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.28, nl: [30, -30],  fl: [-24, -24], lean: -1, bob: 1, head: [1, 0],  tail: [42, 70], na: [-26, -74],  fa: [-18, -64], gunAng: -72,  bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 2, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.42, nl: [32, -32],  fl: [-26, -26], lean: -1, bob: 1, head: [1, 0],  tail: [44, 74], na: [-28, -76],  fa: [-20, -66], gunAng: -76,  bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 2, shoulderDx: 0, shoulderDy: 0 },
-      { p: 0.56, nl: [38, -24],  fl: [-30, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [20, 38], na: [48, 106],   fa: [34, 92],   gunAng: 116,  bladeScale: 1.0, trailFrom: -76,  twoHand: true, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
-      { p: 0.70, nl: [42, -26],  fl: [-34, -28], lean: 1,  bob: 0, head: [1, 0],  tail: [14, 28], na: [88, 146],   fa: [74, 132],  gunAng: 158,  bladeScale: 1.0, trailFrom: -44,  twoHand: true, chargeLv: 2, shoulderDx: 1, shoulderDy: -1 },
-      { p: 0.84, nl: [34, -22],  fl: [-26, -24], lean: 1,  bob: 0, head: [1, 0],  tail: [20, 38], na: [62, 120],   fa: [48, 106],  gunAng: 132,  bladeScale: 1.0, trailFrom: 48,   twoHand: true, chargeLv: 1, shoulderDx: 1, shoulderDy: 0 },
-      { p: 1.00, nl: [24, -20],  fl: [-18, -22], lean: 0,  bob: 0, head: [0, 0],  tail: [26, 48], na: [16, 66],    fa: [4, 52],    gunAng: 72,   bladeScale: 1.0, trailFrom: null, twoHand: true, chargeLv: 0, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.0000, nl: [20, -20], fl: [-16, -20], lean: 0,  bob: 0, head: [0, 0],  tail: [30, 54], na: [24, 76],    fa: [18, 72],    gunAng: 132,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,              flourishPhase: 0,  spinFlip: false, twoHand: false, chargeLv: 1, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.0625, nl: [24, -22], fl: [-18, -22], lean: -1, bob: 0, head: [1, 0],  tail: [34, 60], na: [-46, -94],  fa: [32, 84],    gunAng: -56,  bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,              flourishPhase: 0,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.1250, nl: [28, -22], fl: [-22, -24], lean: 1,  bob: 0, head: [1, 0],  tail: [26, 48], na: [56, 108],   fa: [-28, -76],  gunAng: 152,  bladeScale: 1.0, trailFrom: -56,  slashRetract: 0.0,  slashType: 'swordFlourish3D', flourishPhase: 1,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.1875, nl: [28, -22], fl: [-22, -24], lean: 1,  bob: 0, head: [0, -1], tail: [28, 52], na: [56, 108],   fa: [-28, -76],  gunAng: 152,  bladeScale: 1.0, trailFrom: 48,   slashRetract: 0.50, slashType: 'swordFlourish3D', flourishPhase: 2,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.2500, nl: [32, -24], fl: [-26, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [22, 42], na: [10, 58],    fa: [-38, -88],  gunAng: 34,   bladeScale: 1.0, trailFrom: 168,  slashRetract: 0.0,  slashType: 'swordFlourish3D', flourishPhase: 3,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.3125, nl: [32, -24], fl: [-26, -26], lean: 1,  bob: 0, head: [1, 0],  tail: [22, 42], na: [10, 58],    fa: [-38, -88],  gunAng: 34,   bladeScale: 1.0, trailFrom: 96,   slashRetract: 0.50, slashType: 'swordFlourish3D', flourishPhase: 4,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.3750, nl: [26, -22], fl: [-22, -24], lean: 0,  bob: 0, head: [0, 0],  tail: [20, 38], na: [-48, -96],  fa: [28, 80],    gunAng: -112, bladeScale: 1.0, trailFrom: 34,   slashRetract: 0.0,  slashType: 'swordFlourish3D', flourishPhase: 5,  spinFlip: true,  twoHand: false, chargeLv: 2, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.4375, nl: [38, -24], fl: [-30, -28], lean: 1,  bob: 0, head: [1, 0],  tail: [18, 34], na: [48, 98],    fa: [-44, -96],  gunAng: 116,  bladeScale: 1.0, trailFrom: -112, slashRetract: 0.0,  slashType: 'swordFlourish3D', flourishPhase: 6,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.5000, nl: [38, -24], fl: [-30, -28], lean: 1,  bob: 0, head: [1, 0],  tail: [18, 34], na: [48, 98],    fa: [-44, -96],  gunAng: 116,  bladeScale: 1.0, trailFrom: 12,   slashRetract: 0.50, slashType: 'swordFlourish3D', flourishPhase: 7,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.5625, nl: [28, -22], fl: [-22, -24], lean: -1, bob: 0, head: [0, 0],  tail: [34, 60], na: [-56, -104], fa: [30, 82],    gunAng: -118, bladeScale: 1.0, trailFrom: 76,   slashRetract: 0.80, slashType: 'swordFlourish3D', flourishPhase: 8,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.6250, nl: [42, -26], fl: [-34, -30], lean: 1,  bob: 0, head: [1, 0],  tail: [14, 28], na: [46, 92],    fa: [-54, -108], gunAng: 92,   bladeScale: 1.0, trailFrom: -118, slashRetract: 0.0,  slashType: 'swordFlourish3D', flourishPhase: 9,  spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.6875, nl: [42, -26], fl: [-34, -30], lean: 1,  bob: 0, head: [1, 0],  tail: [14, 28], na: [46, 92],    fa: [-54, -108], gunAng: 92,   bladeScale: 1.0, trailFrom: -96,  slashRetract: 0.12, slashType: 'swordFlourish3D', flourishPhase: 10, spinFlip: false, twoHand: false, chargeLv: 2, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.7500, nl: [42, -26], fl: [-34, -30], lean: 1,  bob: 0, head: [1, 0],  tail: [14, 28], na: [46, 92],    fa: [-54, -108], gunAng: 92,   bladeScale: 1.0, trailFrom: -12,  slashRetract: 0.52, slashType: 'swordFlourish3D', flourishPhase: 11, spinFlip: false, twoHand: false, chargeLv: 1, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.8125, nl: [40, -24], fl: [-32, -28], lean: 1,  bob: 0, head: [1, 0],  tail: [16, 32], na: [46, 92],    fa: [-54, -108], gunAng: 92,   bladeScale: 1.0, trailFrom: 48,   slashRetract: 0.82, slashType: 'swordFlourish3D', flourishPhase: 12, spinFlip: false, twoHand: false, chargeLv: 0, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.8750, nl: [28, -20], fl: [-22, -22], lean: 0,  bob: 0, head: [0, 0],  tail: [24, 46], na: [26, 72],    fa: [-18, 30],   gunAng: 80,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,              flourishPhase: 0,  spinFlip: false, twoHand: false, chargeLv: 0, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.9375, nl: [20, -18], fl: [-16, -20], lean: 0,  bob: 0, head: [0, 0],  tail: [28, 50], na: [14, 60],    fa: [-6, 36],    gunAng: 70,   bladeScale: 1.0, trailFrom: null, slashRetract: 0,    slashType: null,              flourishPhase: 0,  spinFlip: false, twoHand: false, chargeLv: 0, shoulderDx: 0, shoulderDy: 0 },
     ],
   };
-  SWORD_ACT_KF.combo4 = SWORD_ACT_KF.combo3;
   SWORD_ACT_KF.swing = SWORD_ACT_KF.combo1;
 
   /* 1. 超长铁质太刀 (Katana) —— 严格遵循「前摇武器摆放 → 下一帧直接到劈砍完位置+满刀光拖尾 → 再下一帧武器位置保持不变+刀光收回一半」三拍打击节奏：
@@ -3525,11 +3563,11 @@
       { p: 0.42, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],  tail: [18, 34], na: [58, 108],   fa: [-38, -74],  gunAng: 126, edgeDir: 1,  sheathed: false, trailFrom: -58,  slashRetract: 0.08, slashType: 'katanaHoriz3D', twoHand: false, shoulderDx: 1, shoulderDy: 0, martialStance: true },
       { p: 0.56, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],  tail: [18, 34], na: [58, 108],   fa: [-38, -74],  gunAng: 126, edgeDir: 1,  sheathed: false, trailFrom: 34,   slashRetract: 0.50, slashType: 'katanaHoriz3D', twoHand: false, shoulderDx: 1, shoulderDy: 0, martialStance: true },
       { p: 0.70, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],  tail: [20, 36], na: [58, 108],   fa: [-38, -74],  gunAng: 126, edgeDir: 1,  sheathed: false, trailFrom: 80,   slashRetract: 0.78, slashType: 'katanaHoriz3D', twoHand: false, shoulderDx: 1, shoulderDy: 0, martialStance: true },
-      { p: 0.84, nl: [40, -22],  fl: [-36, -44], lean: 1,  bob: 1, head: [1, 0],  tail: [24, 44], na: [26, 62],    fa: [-46, -80],  gunAng: 62,  edgeDir: 1,  sheathed: false, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, shoulderDx: 1, shoulderDy: 0, martialStance: true },
-      { p: 1.00, nl: [36, -22],  fl: [-32, -40], lean: 1,  bob: 1, head: [1, 1],  tail: [28, 50], na: [12, 42],    fa: [-44, -78],  gunAng: 40,  edgeDir: 1,  sheathed: false, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, shoulderDx: 1, shoulderDy: 1, martialStance: true },
+      { p: 0.84, nl: [42, -22],  fl: [-38, -46], lean: 2,  bob: 1, head: [1, 0],  tail: [22, 40], na: [58, 108],   fa: [-38, -74],  gunAng: 126, edgeDir: 1,  sheathed: false, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, shoulderDx: 1, shoulderDy: 0, martialStance: true },
+      { p: 1.00, nl: [38, -20],  fl: [-34, -42], lean: 1,  bob: 0, head: [1, 0],  tail: [26, 46], na: [58, 108],   fa: [-38, -74],  gunAng: 126, edgeDir: 1,  sheathed: false, trailFrom: null, slashRetract: 0,    slashType: null,            twoHand: false, shoulderDx: 1, shoulderDy: 0, martialStance: true },
     ],
     // 第2段：极速上下二连斩其一 · 反手极速斜上挑 (0.24s 高速帧)
-    // F0-F1: 前摇武器摆放 (身前低位 gunAng=36°) → F2-F3: 直接到挑斩完高空位置 (gunAng=164°) + 满刀光 → F4-F5: 武器位置保持不变 (gunAng=164°, na=[116,156], fa=[-78,-112]) + 刀光收回一半 → F6-F7: 高空衔接下劈
+    // F0-F1: 前摇武器摆放 (身前低位 gunAng=36°) → F2-F3: 直接到挑斩完高空位置 (gunAng=164°) + 满刀光 → F4-F5: 武器位置保持不变 (gunAng=164°, na=[116,156], fa=[-78,-112]) + 刀光收回一半 → F6-F7: 保持收刀定格不提前跳下一段前摇
     combo2: [
       { p: 0.00, nl: [36, -22],  fl: [-32, -40], lean: 1,  bob: 1, head: [1, 1],   tail: [28, 50], na: [12, 42],    fa: [-44, -78],  gunAng: 40,  edgeDir: 1,  trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: false, shoulderDx: 1,  shoulderDy: 1,  martialStance: true },
       { p: 0.14, nl: [38, -24],  fl: [-34, -42], lean: 2,  bob: 1, head: [1, 1],   tail: [30, 54], na: [8, 38],     fa: [-44, -78],  gunAng: 36,  edgeDir: 1,  trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: false, shoulderDx: 1,  shoulderDy: 1,  martialStance: true },
@@ -3537,11 +3575,11 @@
       { p: 0.42, nl: [44, -24],  fl: [-42, -50], lean: 1,  bob: 0, head: [1, -1],  tail: [40, 68], na: [116, 156],  fa: [-78, -112], gunAng: 164, edgeDir: 1,  trailFrom: 36,   slashRetract: 0.08, slashType: 'katanaFastUp', twoHand: false, shoulderDx: 1,  shoulderDy: -1, martialStance: true },
       { p: 0.56, nl: [44, -24],  fl: [-42, -50], lean: 1,  bob: 0, head: [1, -1],  tail: [42, 70], na: [116, 156],  fa: [-78, -112], gunAng: 164, edgeDir: 1,  trailFrom: 100,  slashRetract: 0.50, slashType: 'katanaFastUp', twoHand: false, shoulderDx: 1,  shoulderDy: -1, martialStance: true },
       { p: 0.70, nl: [44, -24],  fl: [-42, -50], lean: 1,  bob: 0, head: [1, -1],  tail: [40, 68], na: [116, 156],  fa: [-78, -112], gunAng: 164, edgeDir: 1,  trailFrom: 132,  slashRetract: 0.78, slashType: 'katanaFastUp', twoHand: false, shoulderDx: 1,  shoulderDy: -1, martialStance: true },
-      { p: 0.84, nl: [40, -22],  fl: [-36, -44], lean: 0,  bob: 0, head: [0, -1],  tail: [36, 60], na: [128, 174],  fa: [24, 68],    gunAng: 184, edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: true,  shoulderDx: 0,  shoulderDy: -1, martialStance: true },
-      { p: 1.00, nl: [38, -20],  fl: [-34, -42], lean: 0,  bob: 0, head: [0, -1],  tail: [34, 58], na: [136, 186],  fa: [118, 168],  gunAng: 200, edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: true,  shoulderDx: 0,  shoulderDy: -1, martialStance: true },
+      { p: 0.84, nl: [42, -22],  fl: [-38, -46], lean: 1,  bob: 0, head: [1, -1],  tail: [38, 64], na: [116, 156],  fa: [-78, -112], gunAng: 164, edgeDir: 1,  trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: false, shoulderDx: 1,  shoulderDy: -1, martialStance: true },
+      { p: 1.00, nl: [38, -20],  fl: [-34, -42], lean: 1,  bob: 0, head: [1, -1],  tail: [36, 60], na: [116, 156],  fa: [-78, -112], gunAng: 164, edgeDir: 1,  trailFrom: null, slashRetract: 0,    slashType: null,           twoHand: false, shoulderDx: 1,  shoulderDy: -1, martialStance: true },
     ],
     // 第3段：极速上下二连斩其二 · 正手极速斜下劈 (0.24s 高速帧 · 上弯弧)
-    // F0-F1: 前摇武器摆放 (承接上挑高位 gunAng=204°) → F2-F3: 直接到斜劈完位置 (gunAng=66°) + 满刀光 → F4-F5: 武器位置保持不变 (gunAng=66°, na=[32,70], fa=[-46,-82]) + 刀光收回一半 → F6-F7: 提刀蓄势衔接大上段
+    // F0-F1: 前摇武器摆放 (承接上挑高位 gunAng=204°) → F2-F3: 直接到斜劈完位置 (gunAng=66°) + 满刀光 → F4-F5: 武器位置保持不变 (gunAng=66°, na=[32,70], fa=[-46,-82]) + 刀光收回一半 → F6-F7: 保持收刀定格不提前跳下一段前摇
     combo3: [
       { p: 0.00, nl: [38, -20],  fl: [-34, -42], lean: 0,  bob: 0, head: [0, -1],  tail: [34, 58], na: [136, 186],  fa: [118, 168],  gunAng: 200, edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true,  shoulderDx: 0,  shoulderDy: -1, martialStance: true },
       { p: 0.14, nl: [40, -22],  fl: [-36, -44], lean: 1,  bob: 0, head: [0, -1],  tail: [38, 64], na: [140, 190],  fa: [122, 172],  gunAng: 204, edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true,  shoulderDx: 0,  shoulderDy: -1, martialStance: true },
@@ -3549,8 +3587,8 @@
       { p: 0.42, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],   tail: [18, 34], na: [32, 70],    fa: [-46, -82],  gunAng: 66,  edgeDir: -1, trailFrom: 204,  slashRetract: 0.08, slashType: 'katanaFastDown', twoHand: false, shoulderDx: 1,  shoulderDy: 0,  martialStance: true },
       { p: 0.56, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],   tail: [18, 34], na: [32, 70],    fa: [-46, -82],  gunAng: 66,  edgeDir: -1, trailFrom: 135,  slashRetract: 0.50, slashType: 'katanaFastDown', twoHand: false, shoulderDx: 1,  shoulderDy: 0,  martialStance: true },
       { p: 0.70, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],   tail: [20, 36], na: [32, 70],    fa: [-46, -82],  gunAng: 66,  edgeDir: -1, trailFrom: 100,  slashRetract: 0.78, slashType: 'katanaFastDown', twoHand: false, shoulderDx: 1,  shoulderDy: 0,  martialStance: true },
-      { p: 0.84, nl: [36, -20],  fl: [-32, -40], lean: 0,  bob: 0, head: [0, -1],  tail: [30, 52], na: [118, 168],  fa: [102, 152],  gunAng: 176, edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true,  shoulderDx: 0,  shoulderDy: -1, martialStance: true },
-      { p: 1.00, nl: [32, -18],  fl: [-28, -36], lean: -1, bob: 0, head: [-1, -1], tail: [36, 62], na: [138, 190],  fa: [122, 174],  gunAng: 216, edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true,  shoulderDx: -1, shoulderDy: -1, martialStance: true },
+      { p: 0.84, nl: [42, -22],  fl: [-38, -46], lean: 2,  bob: 1, head: [1, 0],   tail: [22, 40], na: [32, 70],    fa: [-46, -82],  gunAng: 66,  edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: false, shoulderDx: 1,  shoulderDy: 0,  martialStance: true },
+      { p: 1.00, nl: [38, -20],  fl: [-34, -42], lean: 1,  bob: 0, head: [1, 0],   tail: [26, 46], na: [32, 70],    fa: [-46, -82],  gunAng: 66,  edgeDir: -1, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: false, shoulderDx: 1,  shoulderDy: 0,  martialStance: true },
     ],
     // 第4段：终结技 · 大上段重下劈 (0.52s 播放总时长不变，前摇慢出刀蓄势 4 帧，凸显大上段沉稳气势)
     // F0-F3 (p=0.00..0.42): 4帧慢速大上段双手举刀过顶前摇蓄力 (gunAng=214°->222°->228°->232°) → F4 (p=0.56): 直接到深弓步重劈终点位置 (gunAng=50°) + 满刀光 → F5 (p=0.70): 武器位置保持不变 (gunAng=50°, na=[20,52], fa=[8,40]) + 刀光收回一半 → F6 (p=0.84): 余光渐隐 → F7 (p=1.00): 纳刀归鞘
@@ -3582,69 +3620,172 @@
   };
   KATANA_ACT_KF.swing = KATANA_ACT_KF.combo1;
 
-  /* 2. 超巨型铁质大剑 (Greatsword) —— 2段势大力沉重武连击 + 右键裂地重击斩 (严格遵循「3帧沉重前摇摆放 → 下一帧直接到劈砍完位置+3D满刀光拖尾 → 再下一帧武器位置保持不变+刀光收回一半」)：
-   * - 待机与移动状态：无论 45° 待机还是侧面行走/奔跑/跳跃，巨剑始终沉稳扛在角色肩上 (gunAng = -132° / -126°)；
-   * - 第1段 (combo1 · 0.62s)：肩扛卸力·拖地狂风上撩巨弧斩 —— 从肩扛姿势沉身卸力将巨剑垂落于身后地面 (-24°)，随后全身发力沿 3D 斜面向上掀出 176° 狂风巨弧上撩 (gunAng = 152°)，刀光遵循距刀越远越细+毛边+动态模糊+内侧锯齿；下一帧巨剑定格在 152° 不动、刀光收回一半；
-   * - 第2段 (combo2 · 0.72s)：狮子奋迅·过肩蓄力崩地重砸 —— 承接上撩高位将巨剑深拉至脑后过肩极限 (246°)，蓄满3帧后猛然跃步俯身将 21.5px 超宽巨刃砸入身前地面 (gunAng = 6°)，拉出 240° 垂天厚重 3D 崩地刀光与碎石激波；下一帧巨剑死死嵌在地面不动、刀光收回一半，最后单手提柄重新扛回肩上！
-   * - 右键秘技 (skill · 0.86s)：霸体沉肩·裂地重击斩 —— 沉肩霸体聚力3帧后，向前下方轰出 3D 宽幅斜裂重斩 (gunAng = 74°)，刀光定格收半并震碎前方地面！ */
+  /* 2. 超巨型铁质大剑 (Greatsword) —— 4段势大力沉重武连击 + 360°霸王大回旋终结技 + 右键裂地重击斩
+   * 严格遵循「沉重前摇摆放 → 下一帧直接到劈砍完位置+3D满刀光拖尾 → 再下一帧武器位置保持不变+刀光收回一半」三拍打击铁律：
+   * - 待机与移动状态：无论 45° 待机还是侧面行走/奔跑/跳跃，巨剑始终沉稳扛在角色肩上 (gunAng = -126° / -130°, shoulderCarry = true)；
+   * - 第1段 (combo1 · 0.58s)：肩扛卸力·拖地狂风上撩斩 —— 从肩扛姿势沉身卸力将巨剑垂落于身后低位 (-28°)，随后全身发力沿 3D 斜面向上掀出 180° 狂风巨弧上撩 (gunAng = 152°)，刀光遵循距刀越远越细+毛边+动态模糊+内侧锯齿；下一拍巨剑定格在 152° 不动、刀光收回一半；
+   * - 第2段 (combo2 · 0.54s)：扭腰拧胯·千钧破阵平扫斩 —— 顺势收刃拧腰深蓄于后腰 (-82°)，随后踏步扭胯向前轰出 3D 宽幅扁椭圆重型平扫月牙 (gsWideSweep3D, gunAng = 116°)，前端严丝合缝贴合 24.5px 巨刃，下一拍巨剑定格 116° 不动、刀光收回一半；
+   * - 第3段 (combo3 · 0.68s)：狮子奋迅·过肩蓄力崩地重砸 —— 承接平扫余势将巨剑高举过肩深拉至脑后极限 (246°)，蓄满3帧后猛然跃步俯身将 24.5px 超宽巨剑向前下方重砸落地 (gunAng = 68°)，完整展现修长宽阔门板巨剑全貌绝不截断，拉出 178° 垂天厚重 3D 崩地刀光；下一拍巨剑定格不动、刀光收回一半；
+   * - 第4段 (combo4 · 0.78s)：霸王风暴·360°重剑大回旋斩 —— 沉腰蓄满扭力 (-54° → -82°) → 中途旋身反扫背后半圈 (whirlPhase=1, gunAng=-112°) → 全力旋腰轰出环绕全身躯干的 360° 立体飓风圆环大回旋斩 (gsWhirlwind3D, whirlPhase=2, gunAng=106°)，后半环绕过角色后背 (gBack)、前半环横扫身前并紧贴巨剑锋刃；下一拍武器定格 106° 不动、360° 风暴环从尾端收回一半，最后潇洒提柄重新扛回肩上！
+   * - 右键秘技 (skill · 0.86s)：霸体沉肩·裂地重击斩 —— 沉肩霸体聚力3帧后，向前下方轰出 3D 宽幅斜裂重斩 (gunAng = 74°)，刀光定格收半！ */
   const GREATSWORD_ACT_KF = {
-    // 第1段：肩扛卸力·拖地狂风上撩巨弧斩 (0.62s · 8帧)
-    // F0-F2 (p=0.00..0.28): 3帧沉重前摇，从肩扛卸力沉身将巨剑拖至身后地面 (-120° -> -56° -> -24°)
-    // F3-F4 (p=0.42..0.56): 直接到狂风上撩终点位置 (gunAng=152°) + 3D 巨型上撩满刀光 (slashRetract=0.0)
-    // F5 (p=0.70): 武器与手臂位置保持 100% 不变 (gunAng=152°, na=[104,158], fa=[90,144]) + 刀光收回一半 (slashRetract=0.50)
-    // F6-F7 (p=0.84..1.00): 余光消散并顺势架回肩后准备衔接二段或归位肩扛
+    // 第1段：肩扛卸力·拖地狂风上撩巨弧斩 (0.58s · 8帧)
     combo1: [
-      { p: 0.00, nl: [24, -18],  fl: [-18, -22], lean: 0,  bob: 0, head: [0, 0],   tail: [32, 58], na: [-18, 52],   fa: [-10, 42],  gunAng: -116, trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: 0 },
-      { p: 0.14, nl: [32, -24],  fl: [-24, -30], lean: 1,  bob: 1, head: [1, 1],   tail: [26, 48], na: [-32, -74],  fa: [-20, -60], gunAng: -56,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: 1 },
-      { p: 0.28, nl: [38, -30],  fl: [-30, -38], lean: 2,  bob: 2, head: [1, 1],   tail: [22, 42], na: [-12, -52],  fa: [-4, -42],  gunAng: -24,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1 },
-      { p: 0.42, nl: [42, -20],  fl: [-38, -44], lean: -2, bob: 0, head: [0, -1],  tail: [42, 72], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: -24,  slashRetract: 0.0,  slashType: 'gsColossalUp3D',   twoHand: true, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: -1 },
-      { p: 0.56, nl: [42, -20],  fl: [-38, -44], lean: -2, bob: 0, head: [0, -1],  tail: [44, 74], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: -24,  slashRetract: 0.08, slashType: 'gsColossalUp3D',   twoHand: true, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: -1 },
-      { p: 0.70, nl: [42, -20],  fl: [-38, -44], lean: -2, bob: 0, head: [0, -1],  tail: [42, 72], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: 64,   slashRetract: 0.50, slashType: 'gsColossalUp3D',   twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: -1 },
-      { p: 0.84, nl: [34, -18],  fl: [-28, -34], lean: -1, bob: 0, head: [0, -1],  tail: [38, 66], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: 108,  slashRetract: 0.82, slashType: 'gsColossalUp3D',   twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: -1 },
-      { p: 1.00, nl: [22, -16],  fl: [-18, -22], lean: -1, bob: 0, head: [0, 0],   tail: [34, 60], na: [132, 188],  fa: [118, 174], gunAng: 224,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.00, nl: [24, -18],  fl: [-18, -22], lean: 0,  bob: 0, head: [0, 0],   tail: [32, 58], na: [-18, 52],   fa: [-10, 42],  gunAng: -116, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: 0 },
+      { p: 0.14, nl: [32, -24],  fl: [-24, -30], lean: 1,  bob: 1, head: [1, 1],   tail: [26, 48], na: [-32, -74],  fa: [-20, -60], gunAng: -56,  trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: 1 },
+      { p: 0.28, nl: [38, -30],  fl: [-30, -38], lean: 2,  bob: 2, head: [1, 1],   tail: [22, 42], na: [-14, -56],  fa: [-6, -44],  gunAng: -28,  trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1 },
+      { p: 0.42, nl: [42, -20],  fl: [-38, -44], lean: -2, bob: 0, head: [0, -1],  tail: [42, 72], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: -28,  slashRetract: 0.0,  slashType: 'gsColossalUp3D', twoHand: true, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: -1 },
+      { p: 0.56, nl: [42, -20],  fl: [-38, -44], lean: -2, bob: 0, head: [0, -1],  tail: [44, 74], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: -28,  slashRetract: 0.08, slashType: 'gsColossalUp3D', twoHand: true, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: -1 },
+      { p: 0.70, nl: [42, -20],  fl: [-38, -44], lean: -2, bob: 0, head: [0, -1],  tail: [42, 72], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: 62,   slashRetract: 0.50, slashType: 'gsColossalUp3D', twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: -1 },
+      { p: 0.84, nl: [34, -18],  fl: [-28, -34], lean: -1, bob: 0, head: [0, -1],  tail: [38, 66], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: 112,  slashRetract: 0.82, slashType: 'gsColossalUp3D', twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: -1 },
+      { p: 1.00, nl: [34, -18],  fl: [-28, -34], lean: -1, bob: 0, head: [0, -1],  tail: [36, 62], na: [104, 158],  fa: [90, 144],  gunAng: 152,  trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: -1 },
     ],
-    // 第2段：狮子奋迅·过肩蓄力崩地重砸 (0.72s · 8帧)
-    // F0-F2 (p=0.00..0.28): 3帧过肩满蓄前摇，双手将巨剑拉至脑后极限 (226° -> 238° -> 246°, lean=-2)
-    // F3-F4 (p=0.42..0.56): 瞬间跃步沉身将巨剑砸入身前地面 (gunAng=6°) + 240° 3D 崩地满刀光 (slashRetract=0.0)
-    // F5 (p=0.70): 巨剑死死嵌在地面保持 100% 不动 (gunAng=6°, na=[54,14], fa=[42,6]) + 刀光收回一半 (slashRetract=0.50)
-    // F6-F7 (p=0.84..1.00): 拔剑起身，重新将巨剑扛回肩上 (-132°)
+    // 第2段：扭腰拧胯·千钧破阵平扫斩 (0.54s · 8帧)
     combo2: [
+      { p: 0.00, nl: [26, -20],  fl: [-20, -26], lean: -1, bob: 0, head: [-1, 0],  tail: [34, 60], na: [-28, -72],  fa: [18, 62],   gunAng: -58,  trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: -1, shoulderDy: 0 },
+      { p: 0.14, nl: [30, -24],  fl: [-24, -30], lean: -1, bob: 1, head: [-1, 0],  tail: [38, 66], na: [-38, -84],  fa: [22, 68],   gunAng: -72,  trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: -1, shoulderDy: 0 },
+      { p: 0.28, nl: [34, -28],  fl: [-28, -36], lean: -2, bob: 1, head: [-1, 1],  tail: [42, 72], na: [-46, -92],  fa: [26, 72],   gunAng: -82,  trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: -1, shoulderDy: 1 },
+      { p: 0.42, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],   tail: [18, 34], na: [52, 102],   fa: [-32, -70], gunAng: 116,  trailFrom: -82,  slashRetract: 0.0,  slashType: 'gsWideSweep3D',  twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.56, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],   tail: [16, 30], na: [52, 102],   fa: [-32, -70], gunAng: 116,  trailFrom: -82,  slashRetract: 0.08, slashType: 'gsWideSweep3D',  twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.70, nl: [46, -24],  fl: [-44, -52], lean: 2,  bob: 1, head: [1, 0],   tail: [18, 34], na: [52, 102],   fa: [-32, -70], gunAng: 116,  trailFrom: 17,   slashRetract: 0.50, slashType: 'gsWideSweep3D',  twoHand: true, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.84, nl: [36, -20],  fl: [-30, -36], lean: 1,  bob: 0, head: [0, 0],   tail: [24, 44], na: [52, 102],   fa: [-32, -70], gunAng: 116,  trailFrom: 76,   slashRetract: 0.82, slashType: 'gsWideSweep3D',  twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: 0 },
+      { p: 1.00, nl: [36, -20],  fl: [-30, -36], lean: 1,  bob: 0, head: [0, 0],   tail: [26, 46], na: [52, 102],   fa: [-32, -70], gunAng: 116,  trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: 0 },
+    ],
+    // 第3段：狮子奋迅·过肩蓄力崩地重砸 (0.68s · 8帧)
+    combo3: [
       { p: 0.00, nl: [-10, -22], fl: [22, -16],  lean: -1, bob: 0, head: [-1, -1], tail: [38, 66], na: [138, 194],  fa: [124, 180], gunAng: 226,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: -1, shoulderDy: -1 },
       { p: 0.14, nl: [-14, -24], fl: [26, -18],  lean: -2, bob: 0, head: [-1, -1], tail: [42, 72], na: [148, 204],  fa: [134, 190], gunAng: 238,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: -1, shoulderDy: -1 },
       { p: 0.28, nl: [-18, -28], fl: [30, -20],  lean: -2, bob: 0, head: [-1, -1], tail: [46, 78], na: [154, 210],  fa: [140, 196], gunAng: 246,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: -1, shoulderDy: -1 },
-      { p: 0.42, nl: [48, -28],  fl: [-44, -52], lean: 2,  bob: 2, head: [1, 1],   tail: [16, 28], na: [54, 14],    fa: [42, 6],    gunAng: 6,    trailFrom: 246,  slashRetract: 0.0,  slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1, slamBurst: 1.0 },
-      { p: 0.56, nl: [48, -28],  fl: [-44, -52], lean: 2,  bob: 2, head: [1, 1],   tail: [14, 26], na: [54, 14],    fa: [42, 6],    gunAng: 6,    trailFrom: 246,  slashRetract: 0.08, slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1, slamBurst: 0.85 },
-      { p: 0.70, nl: [48, -28],  fl: [-44, -52], lean: 2,  bob: 2, head: [1, 1],   tail: [16, 30], na: [54, 14],    fa: [42, 6],    gunAng: 6,    trailFrom: 126,  slashRetract: 0.50, slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1, slamBurst: 0.45 },
-      { p: 0.84, nl: [36, -24],  fl: [-28, -34], lean: 1,  bob: 1, head: [1, 0],   tail: [22, 40], na: [54, 14],    fa: [42, 6],    gunAng: 6,    trailFrom: 66,   slashRetract: 0.82, slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: 0, slamBurst: 0.2 },
-      { p: 1.00, nl: [20, -16],  fl: [-16, -20], lean: 0,  bob: 0, head: [0, 0],   tail: [28, 50], na: [36, 142],   fa: [-38, 36],  gunAng: -130, trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: false, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0, shoulderCarry: true },
+      { p: 0.42, nl: [48, -28],  fl: [-44, -52], lean: 2,  bob: 2, head: [1, 1],   tail: [16, 28], na: [40, 74],    fa: [28, 62],   gunAng: 68,   trailFrom: 246,  slashRetract: 0.0,  slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1, slamBurst: 1.0 },
+      { p: 0.56, nl: [48, -28],  fl: [-44, -52], lean: 2,  bob: 2, head: [1, 1],   tail: [14, 26], na: [40, 74],    fa: [28, 62],   gunAng: 68,   trailFrom: 246,  slashRetract: 0.08, slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1, slamBurst: 0.85 },
+      { p: 0.70, nl: [48, -28],  fl: [-44, -52], lean: 2,  bob: 2, head: [1, 1],   tail: [16, 30], na: [40, 74],    fa: [28, 62],   gunAng: 68,   trailFrom: 157,  slashRetract: 0.50, slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 1, slamBurst: 0.45 },
+      { p: 0.84, nl: [36, -24],  fl: [-28, -34], lean: 1,  bob: 1, head: [1, 0],   tail: [22, 40], na: [40, 74],    fa: [28, 62],   gunAng: 68,   trailFrom: 112,  slashRetract: 0.82, slashType: 'gsEarthShatter3D', twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: 0, slamBurst: 0.2 },
+      { p: 1.00, nl: [36, -24],  fl: [-28, -34], lean: 1,  bob: 1, head: [1, 0],   tail: [24, 44], na: [40, 74],    fa: [28, 62],   gunAng: 68,   trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 1,  shoulderDy: 0 },
     ],
-    // 右键秘技：霸体沉肩·裂地重击斩 (0.86s · 8帧)
-    // F0-F2 (p=0.00..0.28): 沉肩霸体压步蓄力 (-136° -> -148° -> -158°)
-    // F3-F4 (p=0.42..0.56): 向前下方轰出 3D 宽幅斜裂巨弧重斩 (gunAng=74°) + 满刀光 (slashRetract=0.0)
-    // F5 (p=0.70): 巨剑位置保持不变 (gunAng=74°, na=[40,86], fa=[26,72]) + 刀光收回一半 (slashRetract=0.50)
-    // F6-F7 (p=0.84..1.00): 余光消散并重新扛回肩上 (-132°)
+    // 第4段：霸王风暴·360°重剑大回旋斩 (0.78s · 8帧)
+    // F0-F1 (p=0.00..0.14): 沉腰压胯向后拧身蓄满回旋扭矩 (-54° -> -82°, trailFrom=null)
+    // F2 (p=0.28): 人物快速转身面向后方 (spinFlip=true)，巨剑横掠后背半周掀起初段回旋风暴 (gunAng=-112°, whirlPhase=1)
+    // F3-F4 (p=0.42..0.56): 人物猛然转回正面，完成 360° 全周身狂暴大回旋横斩定格于身前 (gunAng=106°, whirlPhase=2, slashRetract=0.0)
+    // F5 (p=0.70): 巨剑与双臂 100% 锁死不动 (gunAng=106°, na=[48,98], fa=[-36,-74])，360° 风暴环刀光收回一半 (slashRetract=0.50)
+    // F6 (p=0.84): 余风散尽；F7 (p=1.00): 单手提柄潇洒扛回肩上 (-130°, shoulderCarry=true)
+    combo4: [
+      { p: 0.00, nl: [30, -26],  fl: [-24, -32], lean: -1, bob: 1, head: [-1, 1],  tail: [32, 58], na: [-26, -70],  fa: [14, 58],   gunAng: -54,  trailFrom: null, slashRetract: 0,    slashType: null,             whirlPhase: 0, spinFlip: false, twoHand: true,  chargeLv: 1, crouchStance: true,  martialStance: true,  shoulderDx: -1, shoulderDy: 1 },
+      { p: 0.14, nl: [34, -30],  fl: [-30, -38], lean: -2, bob: 1, head: [-1, 1],  tail: [40, 68], na: [-46, -92],  fa: [22, 68],   gunAng: -82,  trailFrom: null, slashRetract: 0,    slashType: null,             whirlPhase: 0, spinFlip: false, twoHand: true,  chargeLv: 2, crouchStance: true,  martialStance: true,  shoulderDx: -1, shoulderDy: 1 },
+      { p: 0.28, nl: [42, -26],  fl: [-38, -46], lean: 2,  bob: 1, head: [1, 0],   tail: [46, 78], na: [-58, -106], fa: [26, 72],   gunAng: -112, trailFrom: 68,   slashRetract: 0.0,  slashType: 'gsWhirlwind3D',  whirlPhase: 1, spinFlip: true,  twoHand: true,  chargeLv: 2, crouchStance: true,  martialStance: true,  shoulderDx: -1, shoulderDy: 0 },
+      { p: 0.42, nl: [48, -26],  fl: [-46, -54], lean: 2,  bob: 1, head: [1, 0],   tail: [16, 28], na: [48, 98],    fa: [-36, -74], gunAng: 106,  trailFrom: -244, slashRetract: 0.0,  slashType: 'gsWhirlwind3D',  whirlPhase: 2, spinFlip: false, twoHand: true,  chargeLv: 2, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.56, nl: [48, -26],  fl: [-46, -54], lean: 2,  bob: 1, head: [1, 0],   tail: [14, 26], na: [48, 98],    fa: [-36, -74], gunAng: 106,  trailFrom: -244, slashRetract: 0.08, slashType: 'gsWhirlwind3D',  whirlPhase: 2, spinFlip: false, twoHand: true,  chargeLv: 2, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.70, nl: [48, -26],  fl: [-46, -54], lean: 2,  bob: 1, head: [1, 0],   tail: [18, 32], na: [48, 98],    fa: [-36, -74], gunAng: 106,  trailFrom: -69,  slashRetract: 0.50, slashType: 'gsWhirlwind3D',  whirlPhase: 2, spinFlip: false, twoHand: true,  chargeLv: 1, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.84, nl: [34, -22],  fl: [-28, -34], lean: 1,  bob: 0, head: [0, 0],   tail: [24, 44], na: [48, 98],    fa: [-36, -74], gunAng: 106,  trailFrom: 18,   slashRetract: 0.82, slashType: 'gsWhirlwind3D',  whirlPhase: 2, spinFlip: false, twoHand: true,  chargeLv: 0, crouchStance: false, martialStance: true,  shoulderDx: 0,  shoulderDy: 0 },
+      { p: 1.00, nl: [20, -16],  fl: [-16, -20], lean: 0,  bob: 0, head: [0, 0],   tail: [28, 50], na: [36, 142],   fa: [-38, 36],  gunAng: -130, trailFrom: null, slashRetract: 0,    slashType: null,             whirlPhase: 0, spinFlip: false, twoHand: false, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0,  shoulderDy: 0, shoulderCarry: true },
+    ],
+    // 右键战技：勇猛狮子斩 (Savage Lion's Claw · 1.16s · 16帧)
+    // 直接复用人物现有的跳跃上升/下落 (airPose) 与二段跳团身空翻 (P.tuck / P.uncurl + somersaultPhi) 动画帧：
+    // 第1斩 (F0..F5): 蹬地跃起 (airUp) → 空中 360° 前空翻 (95° → 200° → 305°) → 第一记狮子崩地重劈 (gunAng=68° 满刀光 → 武器不动刀光收半)
+    // 第2斩 (F6..F15): 借势二次跃起 (airUp) → 第二轮 360° 狂暴前空翻 (100° → 210° → 315°) → 第二记终结狮子重砸 (gunAng=62° 满刀光 → 武器不动刀光收半) → 提剑扛回肩上
     skill: [
-      { p: 0.00, nl: [28, -22],  fl: [-22, -26], lean: -1, bob: 0, head: [0, 0],   tail: [34, 60], na: [-42, -90],  fa: [16, 62],   gunAng: -136, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: -1, shoulderDy: 0 },
-      { p: 0.14, nl: [32, -26],  fl: [-26, -32], lean: -1, bob: 1, head: [-1, 0],  tail: [38, 66], na: [-54, -102], fa: [20, 68],   gunAng: -148, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: -1, shoulderDy: 1 },
-      { p: 0.28, nl: [36, -30],  fl: [-30, -38], lean: -2, bob: 1, head: [-1, 1],  tail: [42, 72], na: [-62, -110], fa: [24, 72],   gunAng: -158, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: -1, shoulderDy: 1 },
-      { p: 0.42, nl: [46, -26],  fl: [-42, -50], lean: 2,  bob: 1, head: [1, 0],   tail: [18, 32], na: [40, 86],    fa: [26, 72],   gunAng: 74,   trailFrom: -158, slashRetract: 0.0,  slashType: 'gsTectonic3D',   twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 0, slamBurst: 0.9 },
-      { p: 0.56, nl: [46, -26],  fl: [-42, -50], lean: 2,  bob: 1, head: [1, 0],   tail: [16, 28], na: [40, 86],    fa: [26, 72],   gunAng: 74,   trailFrom: -158, slashRetract: 0.08, slashType: 'gsTectonic3D',   twoHand: true, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 0, slamBurst: 0.6 },
-      { p: 0.70, nl: [46, -26],  fl: [-42, -50], lean: 2,  bob: 1, head: [1, 0],   tail: [18, 32], na: [40, 86],    fa: [26, 72],   gunAng: 74,   trailFrom: -42,  slashRetract: 0.50, slashType: 'gsTectonic3D',   twoHand: true, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1,  shoulderDy: 0 },
-      { p: 0.84, nl: [34, -22],  fl: [-26, -32], lean: 1,  bob: 0, head: [0, 0],   tail: [24, 44], na: [40, 86],    fa: [26, 72],   gunAng: 74,   trailFrom: 16,   slashRetract: 0.82, slashType: 'gsTectonic3D',   twoHand: true, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0,  shoulderDy: 0 },
-      { p: 1.00, nl: [20, -18],  fl: [-16, -20], lean: 0,  bob: 0, head: [0, 0],   tail: [28, 50], na: [36, 142],   fa: [-38, 36],  gunAng: -130, trailFrom: null, slashRetract: 0,    slashType: null,             twoHand: false, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0, shoulderCarry: true },
+      { p: 0.0000, poseMode: 'airUp',      somersaultPhi: 0,   hopY: 1, nl: [8, -20],   fl: [-14, -24], lean: 1, bob: 0, head: [0, -1], tail: [45, 70], na: [-26, 22],   fa: [-38, 12],   gunAng: -44,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 1, crouchStance: false, martialStance: false, shoulderDx: 0,  shoulderDy: -1 },
+      { p: 0.0625, poseMode: 'flip',       somersaultPhi: 95,  hopY: 3, nl: [125, -50], fl: [120, -55], lean: 2, bob: 2, head: [1, 2],  tail: [70, 88], na: [-72, -112], fa: [-58, -98],  gunAng: -96,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.1250, poseMode: 'flip',       somersaultPhi: 195, hopY: 4, nl: [125, -50], fl: [120, -55], lean: 2, bob: 2, head: [1, 2],  tail: [70, 88], na: [-138, -172],fa: [-124, -158],gunAng: -152, trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: 0,  shoulderDy: 1 },
+      { p: 0.1875, poseMode: 'flipUncurl', somersaultPhi: 295, hopY: 2, nl: [28, -34],  fl: [6, -24],   lean: 1, bob: 1, head: [0, 1],  tail: [22, 44], na: [128, 174],  fa: [114, 160],  gunAng: 170,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: -1, shoulderDy: -1 },
+      { p: 0.2500, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [48, -28],  fl: [-44, -52], lean: 2, bob: 2, head: [1, 1],  tail: [16, 28], na: [40, 74],    fa: [28, 62],    gunAng: 68,   trailFrom: 232,  slashRetract: 0.0,  slashType: 'gsEarthShatter3D', twoHand: true,  chargeLv: 2, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 1, slamBurst: 1.0 },
+      { p: 0.3125, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [48, -28],  fl: [-44, -52], lean: 2, bob: 2, head: [1, 1],  tail: [16, 30], na: [40, 74],    fa: [28, 62],    gunAng: 68,   trailFrom: 150,  slashRetract: 0.50, slashType: 'gsEarthShatter3D', twoHand: true,  chargeLv: 1, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 1, slamBurst: 0.45 },
+      { p: 0.3750, poseMode: 'airUp',      somersaultPhi: 0,   hopY: 1, nl: [8, -20],   fl: [-14, -24], lean: 1, bob: 0, head: [0, -1], tail: [45, 70], na: [-24, 24],   fa: [-36, 14],   gunAng: -40,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 1, crouchStance: false, martialStance: false, shoulderDx: 0,  shoulderDy: -1 },
+      { p: 0.4375, poseMode: 'flip',       somersaultPhi: 100, hopY: 3, nl: [125, -50], fl: [120, -55], lean: 2, bob: 2, head: [1, 2],  tail: [70, 88], na: [-74, -114], fa: [-60, -100], gunAng: -98,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: 1,  shoulderDy: 0 },
+      { p: 0.5000, poseMode: 'flip',       somersaultPhi: 205, hopY: 4, nl: [125, -50], fl: [120, -55], lean: 2, bob: 2, head: [1, 2],  tail: [70, 88], na: [-142, -176],fa: [-128, -162],gunAng: -156, trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: 0,  shoulderDy: 1 },
+      { p: 0.5625, poseMode: 'airDown',    somersaultPhi: 310, hopY: 2, nl: [10, -10],  fl: [-6, -12],  lean: 0, bob: 0, head: [0, 0],  tail: [-28, -8],na: [124, 170],  fa: [110, 156],  gunAng: 166,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: -1, shoulderDy: -1 },
+      { p: 0.6250, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [50, -30],  fl: [-46, -54], lean: 2, bob: 2, head: [1, 1],  tail: [14, 26], na: [36, 70],    fa: [24, 58],    gunAng: 62,   trailFrom: 240,  slashRetract: 0.0,  slashType: 'gsEarthShatter3D', twoHand: true,  chargeLv: 2, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 1, slamBurst: 1.0 },
+      { p: 0.6875, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [50, -30],  fl: [-46, -54], lean: 2, bob: 2, head: [1, 1],  tail: [14, 26], na: [36, 70],    fa: [24, 58],    gunAng: 62,   trailFrom: 240,  slashRetract: 0.08, slashType: 'gsEarthShatter3D', twoHand: true,  chargeLv: 2, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 1, slamBurst: 0.85 },
+      { p: 0.7500, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [50, -30],  fl: [-46, -54], lean: 2, bob: 2, head: [1, 1],  tail: [16, 30], na: [36, 70],    fa: [24, 58],    gunAng: 62,   trailFrom: 151,  slashRetract: 0.50, slashType: 'gsEarthShatter3D', twoHand: true,  chargeLv: 1, crouchStance: true,  martialStance: true,  shoulderDx: 1,  shoulderDy: 1, slamBurst: 0.45 },
+      { p: 0.8125, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [38, -24],  fl: [-30, -36], lean: 1, bob: 1, head: [1, 0],  tail: [22, 40], na: [36, 70],    fa: [24, 58],    gunAng: 62,   trailFrom: 106,  slashRetract: 0.82, slashType: 'gsEarthShatter3D', twoHand: true,  chargeLv: 0, crouchStance: false, martialStance: true,  shoulderDx: 1,  shoulderDy: 0, slamBurst: 0.2 },
+      { p: 0.8750, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [28, -20],  fl: [-22, -26], lean: 0, bob: 0, head: [0, 0],  tail: [26, 46], na: [-12, 64],   fa: [-28, 36],   gunAng: -36,  trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: true,  chargeLv: 0, crouchStance: false, martialStance: true,  shoulderDx: 0,  shoulderDy: 0 },
+      { p: 0.9375, poseMode: null,         somersaultPhi: 0,   hopY: 0, nl: [20, -18],  fl: [-16, -20], lean: 0, bob: 0, head: [0, 0],  tail: [28, 50], na: [36, 142],   fa: [-38, 36],   gunAng: -130, trailFrom: null, slashRetract: 0,    slashType: null,               twoHand: false, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0,  shoulderDy: 0, shoulderCarry: true },
     ],
   };
-  GREATSWORD_ACT_KF.combo3 = GREATSWORD_ACT_KF.combo2;
-  GREATSWORD_ACT_KF.combo4 = GREATSWORD_ACT_KF.combo2;
   GREATSWORD_ACT_KF.swing = GREATSWORD_ACT_KF.combo1;
 
+  /* 3. 铁质双刀 (Dual Blades · 猎鹰双曲剑模组) —— 融合《怪物猎人》鬼人双刀 & 《艾尔登法环》双小曲动作参考：
+   * - 左右独立双持架构：主手右曲剑 (gunAng, edgeDir) 锚定近侧手腕 (na)，副手左曲剑 (offAng, offEdgeDir) 锚定远侧手腕 (fa)；
+   * - 第1段 (combo1 · 0.30s)：鬼人突进·交替二连斜斩 —— 压低身形疾步突进，副手左刀先斜劈而下 (F2满光→F3收半)，主手右刀紧随其后反向斜撩而上 (F4满光→F5定格收半)，两道刀光严格依次出现、绝不堆叠；
+   * - 第2段 (combo2 · 0.30s)：猎鹰反手·双曲剑剪刀十字斩 —— 双臂大开蓄势后同时向胸前内剪，左右双曲剑交错划出凌厉的 3D 『X』形十字交叉寒芒 (dualCross3D)，下一拍双刃定格不动、十字刀光收回一半；
+   * - 第3段 (combo3 · 0.34s)：旋风陀螺·360°贴地双刃回旋斩 —— 俯身拧腰高速转身 360° (spinFlip)，双刀向两侧平展化作贴地双层立体陀螺风暴环 (dualSpin3D)，以后背+身前双层包抄弥补短刃攻击距离；
+   * - 第4段 (combo4 · 0.44s)：飞身双翼·腾空十字撕裂重斩 —— 轻盈跃起如猎鹰展翼高举双刀，凌空俯冲劈出双弧撕裂重斩 (dualRend3D)，落地定格收半；
+   * - 右键秘技 (skill · 1.24s · 16帧)：鬼人乱舞 (Demon Dance) —— 双刀胸前交刃蓄势(F0-F1) → 四道疾风连斩严格依次出现、前消后现(F2-F9：右斜劈→左反挑→右平扫→旋身反撩) → 终结双翼十字裂空重斩(F10-F13) → 振刃归位(F14-F15)！ */
+  const DUAL_BLADES_ACT_KF = {
+    // 一段·鬼人突进·交替二连斜斩 (0.30s · 8帧 · 左刀斜劈与右刀斜挑依次出现)
+    combo1: [
+      { p: 0.00, nl: [28, -22], fl: [-22, -28], lean: 1, bob: 0, head: [1, 0],  tail: [30, 56], na: [-42, -88], fa: [118, 168], gunAng: -62, edgeDir: 1,  offAng: 186, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,        dualPhase: 0, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.14, nl: [34, -26], fl: [-28, -34], lean: 1, bob: 1, head: [1, 0],  tail: [34, 62], na: [-48, -94], fa: [128, 178], gunAng: -70, edgeDir: 1,  offAng: 196, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,        dualPhase: 0, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.28, nl: [42, -26], fl: [-36, -42], lean: 2, bob: 1, head: [1, 0],  tail: [20, 38], na: [-48, -94], fa: [12, 54],   gunAng: -70, edgeDir: 1,  offAng: 44,  offEdgeDir: -1, offFront: true,  trailFrom: null, offTrailFrom: 196,  slashRetract: 0.0,  slashType: 'dualAlt3D', dualPhase: 1, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.42, nl: [42, -26], fl: [-36, -42], lean: 2, bob: 1, head: [1, 0],  tail: [20, 38], na: [-44, -88], fa: [12, 54],   gunAng: -64, edgeDir: 1,  offAng: 44,  offEdgeDir: -1, offFront: true,  trailFrom: null, offTrailFrom: 120,  slashRetract: 0.52, slashType: 'dualAlt3D', dualPhase: 1, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.56, nl: [46, -24], fl: [-40, -46], lean: 2, bob: 0, head: [1, -1], tail: [18, 34], na: [88, 138],  fa: [-28, 22],  gunAng: 148, edgeDir: 1,  offAng: 36,  offEdgeDir: -1, offFront: false, trailFrom: -64,  offTrailFrom: null, slashRetract: 0.0,  slashType: 'dualAlt3D', dualPhase: 2, crouchStance: false, martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.70, nl: [46, -24], fl: [-40, -46], lean: 2, bob: 0, head: [1, -1], tail: [18, 34], na: [88, 138],  fa: [-28, 22],  gunAng: 148, edgeDir: 1,  offAng: 36,  offEdgeDir: -1, offFront: false, trailFrom: 42,   offTrailFrom: null, slashRetract: 0.50, slashType: 'dualAlt3D', dualPhase: 2, crouchStance: false, martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.84, nl: [40, -22], fl: [-32, -38], lean: 1, bob: 0, head: [1, 0],  tail: [22, 42], na: [88, 138],  fa: [-28, 22],  gunAng: 148, edgeDir: 1,  offAng: 36,  offEdgeDir: -1, offFront: false, trailFrom: 96,   offTrailFrom: null, slashRetract: 0.80, slashType: 'dualAlt3D', dualPhase: 2, crouchStance: false, martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 1.00, nl: [30, -20], fl: [-22, -26], lean: 1, bob: 0, head: [0, 0],  tail: [26, 48], na: [48, 98],   fa: [-24, 28],  gunAng: 112, edgeDir: 1,  offAng: 40,  offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,        dualPhase: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0 },
+    ],
+    // 二段·猎鹰反手·双曲剑剪刀十字交叉斩 (0.30s · 8帧 · 法环双小曲经典 X 交叉双斩)
+    combo2: [
+      { p: 0.00, nl: [30, -22], fl: [-24, -30], lean: 0, bob: 0, head: [0, -1], tail: [32, 58], na: [122, 174], fa: [-36, -78], gunAng: 194, edgeDir: -1, offAng: -40, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0, chargeLv: 1, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.14, nl: [34, -26], fl: [-28, -34], lean: -1,bob: 0, head: [0, -1], tail: [38, 66], na: [132, 184], fa: [-44, -86], gunAng: 204, edgeDir: -1, offAng: -48, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.28, nl: [46, -28], fl: [-40, -46], lean: 2, bob: 1, head: [1, 0],  tail: [18, 32], na: [14, 56],   fa: [84, 134],  gunAng: 38,  edgeDir: -1, offAng: 142, offEdgeDir: 1,  offFront: true,  trailFrom: 204,  offTrailFrom: -48,  slashRetract: 0.0,  slashType: 'dualCross3D', dualPhase: 1, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.42, nl: [46, -28], fl: [-40, -46], lean: 2, bob: 1, head: [1, 0],  tail: [16, 30], na: [14, 56],   fa: [84, 134],  gunAng: 38,  edgeDir: -1, offAng: 142, offEdgeDir: 1,  offFront: true,  trailFrom: 204,  offTrailFrom: -48,  slashRetract: 0.08, slashType: 'dualCross3D', dualPhase: 1, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.56, nl: [46, -28], fl: [-40, -46], lean: 2, bob: 1, head: [1, 0],  tail: [16, 30], na: [14, 56],   fa: [84, 134],  gunAng: 38,  edgeDir: -1, offAng: 142, offEdgeDir: 1,  offFront: true,  trailFrom: 121,  offTrailFrom: 47,   slashRetract: 0.50, slashType: 'dualCross3D', dualPhase: 2, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.70, nl: [44, -26], fl: [-36, -42], lean: 2, bob: 1, head: [1, 0],  tail: [18, 34], na: [14, 56],   fa: [84, 134],  gunAng: 38,  edgeDir: -1, offAng: 142, offEdgeDir: 1,  offFront: true,  trailFrom: 80,   offTrailFrom: 95,   slashRetract: 0.78, slashType: 'dualCross3D', dualPhase: 2, chargeLv: 0, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.84, nl: [36, -24], fl: [-28, -34], lean: 1, bob: 1, head: [1, 0],  tail: [24, 44], na: [-12, 42],  fa: [46, 96],   gunAng: 52,  edgeDir: -1, offAng: 108, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 1.00, nl: [28, -22], fl: [-22, -28], lean: 1, bob: 0, head: [0, 0],  tail: [28, 50], na: [-24, 34],  fa: [24, 72],   gunAng: 64,  edgeDir: -1, offAng: 88,  offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0 },
+    ],
+    // 三段·旋风陀螺·360°贴地双刃回旋斩 (0.34s · 8帧 · 怪猎鬼人陀螺回旋突进 + 快速转身 spinFlip)
+    combo3: [
+      { p: 0.00, nl: [34, -30], fl: [-26, -34], lean: 1, bob: 1, head: [1, 1],  tail: [34, 60], na: [-48, -96], fa: [-32, -78], gunAng: -96,  edgeDir: 1,  offAng: -68, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, spinFlip: false, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 1 },
+      { p: 0.14, nl: [38, -34], fl: [-30, -38], lean: 1, bob: 1, head: [1, 1],  tail: [40, 68], na: [-58, -108],fa: [-44, -92], gunAng: -114, edgeDir: 1,  offAng: -84, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 1 },
+      { p: 0.28, nl: [36, -30], fl: [-30, -36], lean: 1, bob: 1, head: [0, 1],  tail: [24, 42], na: [-52, -102],fa: [42, 90],   gunAng: -112, edgeDir: 1,  offAng: 94,  offEdgeDir: 1,  offFront: false, trailFrom: 48,   offTrailFrom: -84,  slashRetract: 0.0,  slashType: 'dualSpin3D', dualPhase: 1, spinFlip: true,  chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 1 },
+      { p: 0.42, nl: [48, -28], fl: [-42, -50], lean: 2, bob: 1, head: [1, 0],  tail: [16, 28], na: [48, 96],   fa: [-52, -98], gunAng: 102,  edgeDir: 1,  offAng: -82, offEdgeDir: -1, offFront: false, trailFrom: -112, offTrailFrom: 94,   slashRetract: 0.0,  slashType: 'dualSpin3D', dualPhase: 2, spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1 },
+      { p: 0.56, nl: [48, -28], fl: [-42, -50], lean: 2, bob: 1, head: [1, 0],  tail: [16, 28], na: [48, 96],   fa: [-52, -98], gunAng: 102,  edgeDir: 1,  offAng: -82, offEdgeDir: -1, offFront: false, trailFrom: -5,   offTrailFrom: 6,    slashRetract: 0.50, slashType: 'dualSpin3D', dualPhase: 2, spinFlip: false, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1 },
+      { p: 0.70, nl: [46, -26], fl: [-38, -46], lean: 2, bob: 1, head: [1, 0],  tail: [18, 32], na: [48, 96],   fa: [-52, -98], gunAng: 102,  edgeDir: 1,  offAng: -82, offEdgeDir: -1, offFront: false, trailFrom: 48,   offTrailFrom: -38,  slashRetract: 0.80, slashType: 'dualSpin3D', dualPhase: 2, spinFlip: false, chargeLv: 0, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1 },
+      { p: 0.84, nl: [36, -24], fl: [-28, -34], lean: 1, bob: 0, head: [1, 0],  tail: [24, 44], na: [32, 82],   fa: [-38, -82], gunAng: 92,   edgeDir: 1,  offAng: -72, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, spinFlip: false, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 1.00, nl: [28, -20], fl: [-20, -26], lean: 1, bob: 0, head: [0, 0],  tail: [28, 50], na: [18, 66],   fa: [-36, -80], gunAng: 80,   edgeDir: -1, offAng: -70, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, spinFlip: false, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0 },
+    ],
+    // 四段终结·飞身双翼·腾空十字撕裂重斩 (0.44s · 8帧 · 跃起双翼展刃→凌空双弧重劈落地)
+    combo4: [
+      { p: 0.00, poseMode: null,      hopY: 0, nl: [36, -34], fl: [22, -38],  lean: 1, bob: 1, head: [0, -1], tail: [36, 62], na: [96, 148],  fa: [82, 134],  gunAng: 174, edgeDir: -1, offAng: 158, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.14, poseMode: 'airUp',   hopY: 3, nl: [8, -20],  fl: [-14, -24], lean: 0, bob: 0, head: [0, -1], tail: [45, 70], na: [128, 182], fa: [112, 166], gunAng: 204, edgeDir: -1, offAng: 188, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.28, poseMode: 'airDown', hopY: 4, nl: [10, -10], fl: [-6, -12],  lean: 1, bob: 0, head: [1, 0],  tail: [-20, 0], na: [136, 190], fa: [120, 174], gunAng: 212, edgeDir: -1, offAng: 196, offEdgeDir: -1, offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, chargeLv: 2, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.42, poseMode: null,      hopY: 0, nl: [48, -30], fl: [-44, -52], lean: 2, bob: 1, head: [1, 1],  tail: [16, 28], na: [12, 52],   fa: [24, 68],   gunAng: 34,  edgeDir: -1, offAng: 54,  offEdgeDir: -1, offFront: true,  trailFrom: 212,  offTrailFrom: 196,  slashRetract: 0.0,  slashType: 'dualRend3D', dualPhase: 1, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1, slamBurst: 1.0 },
+      { p: 0.56, poseMode: null,      hopY: 0, nl: [48, -30], fl: [-44, -52], lean: 2, bob: 1, head: [1, 1],  tail: [14, 26], na: [12, 52],   fa: [24, 68],   gunAng: 34,  edgeDir: -1, offAng: 54,  offEdgeDir: -1, offFront: true,  trailFrom: 212,  offTrailFrom: 196,  slashRetract: 0.08, slashType: 'dualRend3D', dualPhase: 1, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1, slamBurst: 0.85 },
+      { p: 0.70, poseMode: null,      hopY: 0, nl: [48, -30], fl: [-44, -52], lean: 2, bob: 1, head: [1, 1],  tail: [16, 30], na: [12, 52],   fa: [24, 68],   gunAng: 34,  edgeDir: -1, offAng: 54,  offEdgeDir: -1, offFront: true,  trailFrom: 123,  offTrailFrom: 125,  slashRetract: 0.50, slashType: 'dualRend3D', dualPhase: 2, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1, slamBurst: 0.45 },
+      { p: 0.84, poseMode: null,      hopY: 0, nl: [36, -24], fl: [-28, -34], lean: 1, bob: 0, head: [1, 0],  tail: [22, 42], na: [12, 52],   fa: [-24, 30],  gunAng: 48,  edgeDir: -1, offAng: -56, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 1.00, poseMode: null,      hopY: 0, nl: [24, -18], fl: [-18, -22], lean: 0, bob: 0, head: [0, 0],  tail: [28, 50], na: [14, 62],   fa: [-42, -96], gunAng: 78,  edgeDir: -1, offAng: -74, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,         dualPhase: 0, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0 },
+    ],
+    // 右键秘技·鬼人乱舞 (Demon Dance · 1.24s · 16帧长序列 · 四道疾斩严格依次出现、前消后现 + 第5斩终结双翼十字裂空)：
+    // F0-F1: 胸前双刀十字交刃蓄势 → F2-F3: 第1斩·右刃斜劈 → F4-F5: 第2斩·左刃反挑 → F6-F7: 第3斩·右刃贴地平扫 → F8-F9: 第4斩·鬼人旋身回环斩(spinFlip) → F10-F13: 第5斩终结·双刃十字裂空重斩 → F14-F15: 振血归位
+    skill: [
+      { p: 0.0000, nl: [32, -26], fl: [-26, -32], lean: 1,  bob: 1, head: [1, 0],  tail: [32, 58], na: [78, 128],  fa: [14, 62],   gunAng: 138, edgeDir: -1, offAng: 52,  offEdgeDir: 1,  offFront: true,  trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0,  spinFlip: false, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.0625, nl: [36, -30], fl: [-30, -36], lean: 1,  bob: 1, head: [1, 0],  tail: [36, 64], na: [126, 178], fa: [-38, -82], gunAng: 202, edgeDir: -1, offAng: -56, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0,  spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.1250, nl: [42, -26], fl: [-36, -42], lean: 2,  bob: 1, head: [1, 0],  tail: [22, 40], na: [16, 58],   fa: [-42, -88], gunAng: 42,  edgeDir: -1, offAng: -62, offEdgeDir: 1,  offFront: false, trailFrom: 202,  offTrailFrom: null, slashRetract: 0.0,  slashType: 'dualDance3D', dualPhase: 1,  spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.1875, nl: [42, -26], fl: [-36, -42], lean: 2,  bob: 1, head: [1, 0],  tail: [22, 40], na: [16, 58],   fa: [-38, -80], gunAng: 42,  edgeDir: -1, offAng: -54, offEdgeDir: 1,  offFront: false, trailFrom: 122,  offTrailFrom: null, slashRetract: 0.52, slashType: 'dualDance3D', dualPhase: 2,  spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.2500, nl: [44, -24], fl: [-38, -44], lean: 1,  bob: 0, head: [1, -1], tail: [26, 48], na: [-44, -92], fa: [96, 148],  gunAng: -78, edgeDir: 1,  offAng: 158, offEdgeDir: 1,  offFront: true,  trailFrom: null, offTrailFrom: -54,  slashRetract: 0.0,  slashType: 'dualDance3D', dualPhase: 3,  spinFlip: false, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 1, shoulderDy: -1 },
+      { p: 0.3125, nl: [44, -24], fl: [-38, -44], lean: 1,  bob: 0, head: [1, -1], tail: [26, 48], na: [-52, -102],fa: [96, 148],  gunAng: -112,edgeDir: 1,  offAng: 158, offEdgeDir: 1,  offFront: true,  trailFrom: null, offTrailFrom: 52,   slashRetract: 0.52, slashType: 'dualDance3D', dualPhase: 4,  spinFlip: false, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 1, shoulderDy: -1 },
+      { p: 0.3750, nl: [46, -28], fl: [-40, -48], lean: 2,  bob: 1, head: [1, 0],  tail: [18, 34], na: [48, 98],   fa: [-42, -88], gunAng: 104, edgeDir: 1,  offAng: -76, offEdgeDir: -1, offFront: false, trailFrom: -112, offTrailFrom: null, slashRetract: 0.0,  slashType: 'dualDance3D', dualPhase: 5,  spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.4375, nl: [46, -28], fl: [-40, -48], lean: 2,  bob: 1, head: [1, 0],  tail: [18, 34], na: [48, 98],   fa: [-48, -96], gunAng: 104, edgeDir: 1,  offAng: -108,offEdgeDir: 1,  offFront: false, trailFrom: -4,   offTrailFrom: null, slashRetract: 0.52, slashType: 'dualDance3D', dualPhase: 6,  spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.5000, nl: [36, -26], fl: [-30, -36], lean: 1,  bob: 1, head: [0, 0],  tail: [22, 40], na: [-46, -94], fa: [52, 102],  gunAng: -86, edgeDir: 1,  offAng: 118, offEdgeDir: 1,  offFront: true,  trailFrom: null, offTrailFrom: -108, slashRetract: 0.0,  slashType: 'dualDance3D', dualPhase: 7,  spinFlip: true,  chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.5625, nl: [34, -26], fl: [-28, -34], lean: -1, bob: 0, head: [0, -1], tail: [38, 66], na: [134, 186], fa: [-46, -90], gunAng: 212, edgeDir: -1, offAng: -52, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: 8,    slashRetract: 0.56, slashType: 'dualDance3D', dualPhase: 8,  spinFlip: false, chargeLv: 2, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: -1 },
+      { p: 0.6250, nl: [50, -30], fl: [-44, -52], lean: 2,  bob: 1, head: [1, 1],  tail: [14, 26], na: [12, 52],   fa: [86, 136],  gunAng: 34,  edgeDir: -1, offAng: 146, offEdgeDir: 1,  offFront: true,  trailFrom: 212,  offTrailFrom: -52,  slashRetract: 0.0,  slashType: 'dualDance3D', dualPhase: 9,  spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1, slamBurst: 1.0 },
+      { p: 0.6875, nl: [50, -30], fl: [-44, -52], lean: 2,  bob: 1, head: [1, 1],  tail: [14, 26], na: [12, 52],   fa: [86, 136],  gunAng: 34,  edgeDir: -1, offAng: 146, offEdgeDir: 1,  offFront: true,  trailFrom: 212,  offTrailFrom: -52,  slashRetract: 0.10, slashType: 'dualDance3D', dualPhase: 10, spinFlip: false, chargeLv: 2, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1, slamBurst: 0.8 },
+      { p: 0.7500, nl: [50, -30], fl: [-44, -52], lean: 2,  bob: 1, head: [1, 1],  tail: [16, 30], na: [12, 52],   fa: [86, 136],  gunAng: 34,  edgeDir: -1, offAng: 146, offEdgeDir: 1,  offFront: true,  trailFrom: 123,  offTrailFrom: 47,   slashRetract: 0.52, slashType: 'dualDance3D', dualPhase: 11, spinFlip: false, chargeLv: 1, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 1, slamBurst: 0.4 },
+      { p: 0.8125, nl: [46, -28], fl: [-40, -48], lean: 2,  bob: 1, head: [1, 0],  tail: [18, 34], na: [12, 52],   fa: [86, 136],  gunAng: 34,  edgeDir: -1, offAng: 146, offEdgeDir: 1,  offFront: true,  trailFrom: 78,   offTrailFrom: 96,   slashRetract: 0.82, slashType: 'dualDance3D', dualPhase: 12, spinFlip: false, chargeLv: 0, crouchStance: true,  martialStance: true, shoulderDx: 1, shoulderDy: 0 },
+      { p: 0.8750, nl: [32, -22], fl: [-24, -30], lean: 1,  bob: 0, head: [0, 0],  tail: [24, 46], na: [20, 66],   fa: [-32, -76], gunAng: 68,  edgeDir: -1, offAng: -64, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0,  spinFlip: false, chargeLv: 0, crouchStance: false, martialStance: true, shoulderDx: 0, shoulderDy: 0 },
+      { p: 0.9375, nl: [24, -18], fl: [-18, -22], lean: 0,  bob: 0, head: [0, 0],  tail: [28, 50], na: [14, 62],   fa: [-42, -96], gunAng: 78,  edgeDir: -1, offAng: -74, offEdgeDir: 1,  offFront: false, trailFrom: null, offTrailFrom: null, slashRetract: 0,    slashType: null,          dualPhase: 0,  spinFlip: false, chargeLv: 0, crouchStance: false, martialStance: false, shoulderDx: 0, shoulderDy: 0 },
+    ],
+  };
+  DUAL_BLADES_ACT_KF.swing = DUAL_BLADES_ACT_KF.combo1;
+
   function getMeleeKFTable(wId) {
+    if (wId === 'dualBlades') return DUAL_BLADES_ACT_KF;
     if (wId === 'katana') return KATANA_ACT_KF;
     if (wId === 'greatsword') return GREATSWORD_ACT_KF;
     return SWORD_ACT_KF;
   }
 
-  /* 严格按 8 帧离散步进采样（不插值过渡），保证近战挥砍与全身像素步态帧率风格完全统一 */
+  /* 严格按离散步进采样（不插值过渡），支持 8 帧常规挥砍与 16 帧长序列秘技，保证与像素步态帧率风格完全统一 */
   function sampleSwordKF(act, p, wId) {
     const tbl = getMeleeKFTable(wId);
     const list = tbl[act] || SWORD_ACT_KF[act];
@@ -3654,6 +3795,8 @@
     const k = list[idx];
     return {
       frameIdx: idx,
+      poseMode: k.poseMode || null,
+      somersaultPhi: k.somersaultPhi || 0,
       nl: [k.nl[0], k.nl[1]],
       fl: [k.fl[0], k.fl[1]],
       lean: k.lean || 0,
@@ -3664,11 +3807,19 @@
       fa: [k.fa[0], k.fa[1]],
       gunAng: k.gunAng,
       edgeDir: k.edgeDir != null ? k.edgeDir : -1,
+      offAng: k.offAng != null ? k.offAng : (k.gunAng - 140),
+      offEdgeDir: k.offEdgeDir != null ? k.offEdgeDir : 1,
+      offFront: !!k.offFront,
+      offTrailFrom: k.offTrailFrom != null ? k.offTrailFrom : null,
+      dualPhase: k.dualPhase || 0,
       userAng: 90 - k.gunAng,
       bladeScale: 1.0,
       trailFrom: k.trailFrom != null ? k.trailFrom : null,
       slashRetract: k.slashRetract || 0,
       slashType: k.slashType || null,
+      whirlPhase: k.whirlPhase || 0,
+      flourishPhase: k.flourishPhase || 0,
+      shoulderCarry: !!k.shoulderCarry,
       twoHand: !!k.twoHand,
       chargeLv: k.chargeLv || 0,
       sheathed: !!k.sheathed,
@@ -3677,28 +3828,42 @@
       orbitFXPhase: k.orbitFXPhase != null ? k.orbitFXPhase : -1,
       crouchStance: !!k.crouchStance,
       martialStance: !!k.martialStance,
-      hopY: 0,
+      hopY: k.hopY || 0,
       shoulderDx: k.shoulderDx || 0,
       shoulderDy: k.shoulderDy || 0,
       slamBurst: k.slamBurst || 0,
-      spinFlip: false,
+      spinFlip: !!k.spinFlip,
       spinRing: 0,
     };
   }
 
   /* 近战连招与技能骨骼联动：
    * - 普通长剑默认仅驱动上半身骨骼，下肢保留走/跑/跳/站立；
+   * - 铁质双刀 (dualBlades) 在移动/瞄准状态采用猎人「一正握前探 + 一反握后掠」鬼人双牙戒备架势；
    * - 超长太刀 (katana) 在行走/奔跑/跳跃等非出招状态 (act === 'aim' || act === 'idle') 下，始终保持刀收入腰间长鞘，一只手抓握腰间刀把，绝不拔出乱晃；
    * - 超巨型大剑 (greatsword) 在待机与行走/奔跑/跳跃等非出招状态 (act === 'aim' || act === 'idle') 下，始终保持将巨剑沉稳扛在肩上 (na = [22, 116], gunAng = -132°)；
-   * - 太刀与大剑在角色原地出招时，自动联动全身大跨步弓步/压步 (martialStance / crouchStance)；移动/空中出刀则自动保留跑跳下肢，绝不滑步！ */
+   * - 大剑右键战技「勇猛狮子斩」与双刀四段「飞身双翼」(poseMode) 直接复用现有的跳跃上升/下落 (airPose) 与二段跳团身空翻 (P.tuck / P.uncurl) 帧；
+   * - 双刀、太刀与大剑在角色原地出招时，自动联动全身大跨步弓步/压步 (martialStance / crouchStance)；移动/空中出刀则自动保留跑跳下肢，绝不滑步！ */
   function computeMeleeBodyPose(basePo, w) {
     const wid = w && w.id;
-    const isMelee = wid === 'blade' || wid === 'sword' || wid === 'katana' || wid === 'greatsword';
-    if (!w || !isMelee) return { po: basePo, spinFlip: false, hopY: 0 };
+    const isMelee = wid === 'blade' || wid === 'sword' || wid === 'dualBlades' || wid === 'katana' || wid === 'greatsword';
+    if (!w || !isMelee) return { po: basePo, spinFlip: false, somersaultPhi: 0, hopY: 0 };
     const act = w.action || 'aim', p = clamp(w.p || 0, 0, 1);
+    if (wid === 'dualBlades' && (act === 'aim' || act === 'idle')) {
+      if (basePo && basePo.v34) {
+        return { po: basePo, spinFlip: false, somersaultPhi: 0, hopY: 0 };
+      }
+      const aim = (w && w.aim != null) ? w.aim : 90;
+      const aimRot = aim - 90;
+      const outDualReady = Object.assign({}, basePo, {
+        na: [14 + aimRot, 62 + aimRot],
+        fa: [-42 + aimRot, -96 + aimRot],
+      });
+      return { po: outDualReady, spinFlip: false, somersaultPhi: 0, hopY: 0 };
+    }
     if (wid === 'katana' && (act === 'aim' || act === 'idle')) {
       if (basePo && basePo.v34) {
-        return { po: basePo, spinFlip: false, hopY: 0 };
+        return { po: basePo, spinFlip: false, somersaultPhi: 0, hopY: 0 };
       }
       // 侧面移动/行走/奔跑/跳跃时：刀收入鞘，近侧手稳握腰前刀把 (na = [-18, 42])，远侧手随步态自然摆臂或叉腰
       const hasLoco = !!(basePo && (basePo.locoMode || basePo.isAir));
@@ -3706,11 +3871,11 @@
         na: [-18, 42],
         fa: hasLoco && basePo.fa ? basePo.fa : [-42, 38],
       });
-      return { po: outSheathed, spinFlip: false, hopY: 0 };
+      return { po: outSheathed, spinFlip: false, somersaultPhi: 0, hopY: 0 };
     }
     if (wid === 'greatsword' && (act === 'aim' || act === 'idle')) {
       if (basePo && basePo.v34) {
-        return { po: basePo, spinFlip: false, hopY: 0 };
+        return { po: basePo, spinFlip: false, somersaultPhi: 0, hopY: 0 };
       }
       // 侧面移动/行走/奔跑/跳跃时：巨剑始终沉稳扛在肩上，近侧手屈肘高抬至锁骨肩前稳握巨剑长柄 (na = [36, 142])，远侧手随步态自然摆臂或叉腰
       const hasLoco = !!(basePo && (basePo.locoMode || basePo.isAir));
@@ -3718,28 +3883,46 @@
         na: [36, 142],
         fa: hasLoco && basePo.fa ? basePo.fa : [-38, 36],
       });
-      return { po: outShoulderCarry, spinFlip: false, hopY: 0 };
+      return { po: outShoulderCarry, spinFlip: false, somersaultPhi: 0, hopY: 0 };
     }
     const kf = sampleSwordKF(act, p, wid);
-    if (!kf) return { po: basePo, spinFlip: false, hopY: 0 };
+    if (!kf) return { po: basePo, spinFlip: false, somersaultPhi: 0, hopY: 0 };
     const aim = (w && w.aim != null) ? w.aim : 90;
-    const aimRot = basePo && basePo.v34 ? 0 : (aim - 90);
-    const maxLean = (wid === 'katana' || wid === 'greatsword') ? 2 : 1;
+    const effAimRot = (wid === 'greatsword' && act === 'skill') ? 0 : (basePo && basePo.v34 ? 0 : (aim - 90));
+    const effectiveHopY = (basePo && basePo.isAir) ? 0 : (kf.hopY || 0);
+    if (kf.poseMode) {
+      // 直接复用人物现有的跳跃与二段跳动画帧（airPose / P.tuck / P.uncurl），避免重复手调空翻下肢
+      let jumpRef;
+      if (kf.poseMode === 'airUp') jumpRef = airPose(2.0);
+      else if (kf.poseMode === 'airDown') jumpRef = airPose(-1.8);
+      else if (kf.poseMode === 'flip') jumpRef = Object.assign({}, norm(P.tuck), { inFlip: false });
+      else jumpRef = Object.assign({}, norm(P.uncurl), { inFlip: false });
+      const outJump = Object.assign({}, basePo, jumpRef, {
+        v34: false,
+        inFlip: false,
+        na: [kf.na[0] + effAimRot, kf.na[1] + effAimRot],
+        fa: [kf.fa[0] + effAimRot, kf.fa[1] + effAimRot],
+        shoulderDx: kf.shoulderDx,
+        shoulderDy: kf.shoulderDy,
+      });
+      return { po: outJump, spinFlip: !!kf.spinFlip, somersaultPhi: kf.somersaultPhi || 0, hopY: effectiveHopY };
+    }
+    const maxLean = (wid === 'katana' || wid === 'greatsword' || wid === 'dualBlades') ? 2 : 1;
     const isStandingStill = basePo && !basePo.locoMode && basePo.airV == null && !basePo.inFlip && !basePo.inKick;
-    const useMartialLegs = !!(isStandingStill && (kf.crouchStance || ((wid === 'katana' || wid === 'greatsword') && kf.martialStance)));
+    const useMartialLegs = !!(isStandingStill && (kf.crouchStance || ((wid === 'katana' || wid === 'greatsword' || wid === 'dualBlades') && kf.martialStance)));
     const out = Object.assign({}, basePo, {
       nl: useMartialLegs ? kf.nl : basePo.nl,
       fl: useMartialLegs ? kf.fl : basePo.fl,
       lean: clamp(kf.lean || 0, -maxLean, maxLean),
       bob: kf.bob || 0,
       head: kf.head,
-      na: [kf.na[0] + aimRot, kf.na[1] + aimRot],
-      fa: [kf.fa[0] + aimRot, kf.fa[1] + aimRot],
+      na: [kf.na[0] + effAimRot, kf.na[1] + effAimRot],
+      fa: [kf.fa[0] + effAimRot, kf.fa[1] + effAimRot],
       tail: kf.tail,
       shoulderDx: kf.shoulderDx,
       shoulderDy: kf.shoulderDy,
     });
-    return { po: out, spinFlip: false, hopY: 0 };
+    return { po: out, spinFlip: !!kf.spinFlip, somersaultPhi: kf.somersaultPhi || 0, hopY: effectiveHopY };
   }
 
   function computeWeaponPose(w) {
@@ -3748,13 +3931,23 @@
     const aimRot = v34 ? 0 : (aim - 90);
     let na = [aim - 6, aim], fa = [aim - 14, aim + 8], gunAng = aim;
     let slideBack = 0, flash = 0, casing = -1, magDrop = 0, handMag = false, magLockGlow = false, rackGlint = false;
-    let slashArc = -1, slashType = null, slashRetract = 0, bladeScale = 1, twoHand = false, chargeLv = 0, spinPhase = 0, idleGlint = -1, trailFrom = null, spinRing = 0, slamBurst = 0, shoulderDx = 0, shoulderDy = 0, sheathed = false, shoulderCarry = false, sheathSuction = 0, sheathStar = 0, orbitFXPhase = -1, crouchStance = false, martialStance = false, lean = 0, bob = 0, edgeDir = -1;
+    let slashArc = -1, slashType = null, slashRetract = 0, whirlPhase = 0, flourishPhase = 0, dualPhase = 0, bladeScale = 1, twoHand = false, chargeLv = 0, spinPhase = 0, idleGlint = -1, trailFrom = null, offTrailFrom = null, offAng = -74, offEdgeDir = 1, offFront = false, spinRing = 0, slamBurst = 0, shoulderDx = 0, shoulderDy = 0, sheathed = false, shoulderCarry = false, sheathSuction = 0, sheathStar = 0, orbitFXPhase = -1, crouchStance = false, martialStance = false, lean = 0, bob = 0, edgeDir = -1;
 
-    const isMeleeId = id === 'blade' || id === 'sword' || id === 'katana' || id === 'greatsword';
+    const isMeleeId = id === 'blade' || id === 'sword' || id === 'dualBlades' || id === 'katana' || id === 'greatsword';
     if (isMeleeId || act === 'swing' || act.startsWith('combo') || act === 'skill') {
-      const mId = (id === 'katana' || id === 'greatsword') ? id : 'blade';
+      const mId = (id === 'dualBlades' || id === 'katana' || id === 'greatsword') ? id : 'blade';
       const kfTable = getMeleeKFTable(mId);
-      if (mId === 'katana' && (act === 'idle' || act === 'aim')) {
+      if (mId === 'dualBlades' && (act === 'idle' || act === 'aim')) {
+        // 铁质双刀在 45° 待机与侧面瞄准/奔跑时：主手右曲刀低探向前，副手左曲刀鬼人反握后掠，45° 视角下双刀角度刚体锁定随呼吸整像素平移！
+        na = v34 ? [-24, 52] : [14 + aimRot, 62 + aimRot];
+        fa = v34 ? [28, -22] : [-42 + aimRot, -96 + aimRot];
+        gunAng = v34 ? 68 : (78 + aimRot);
+        edgeDir = -1;
+        offAng = v34 ? -64 : (-74 + aimRot);
+        offEdgeDir = 1;
+        offFront = false;
+        idleGlint = p;
+      } else if (mId === 'katana' && (act === 'idle' || act === 'aim')) {
         // 长刀在 45° 待机与侧面行走/奔跑/移动 (act === 'aim' || act === 'idle') 时：
         // 始终保持刀收入腰间长刀鞘里 (sheathed = true)，一只手抓着腰前刀把，绝不在走路时拔出刀拿在手上！
         na = v34 ? [-42, 44] : [-18, 42];
@@ -3778,17 +3971,25 @@
         idleGlint = p;
       } else if (kfTable[act] || SWORD_ACT_KF[act]) {
         const kf = sampleSwordKF(act, p, mId);
-        // 剥离后的双臂与近战武器在肩膀支点处随鼠标瞄准方向 (aimRot = aim - 90°) 整体旋转
-        na = [kf.na[0] + aimRot, kf.na[1] + aimRot];
-        fa = [kf.fa[0] + aimRot, kf.fa[1] + aimRot];
-        gunAng = kf.gunAng + aimRot;
+        const effAimRot = (mId === 'greatsword' && act === 'skill') ? 0 : aimRot;
+        // 剥离后的双臂与近战武器在肩膀支点处随鼠标瞄准方向 (effAimRot = aim - 90°) 整体旋转
+        na = [kf.na[0] + effAimRot, kf.na[1] + effAimRot];
+        fa = [kf.fa[0] + effAimRot, kf.fa[1] + effAimRot];
+        gunAng = kf.gunAng + effAimRot;
         edgeDir = kf.edgeDir != null ? kf.edgeDir : -1;
+        offAng = (kf.offAng != null ? kf.offAng : -74) + effAimRot;
+        offEdgeDir = kf.offEdgeDir != null ? kf.offEdgeDir : 1;
+        offFront = !!kf.offFront;
+        dualPhase = kf.dualPhase || 0;
         lean = kf.lean || 0;
         bob = kf.bob || 0;
         bladeScale = 1.0;
         twoHand = kf.twoHand;
         chargeLv = kf.chargeLv;
         sheathed = !!kf.sheathed;
+        shoulderCarry = !!kf.shoulderCarry;
+        whirlPhase = kf.whirlPhase || 0;
+        flourishPhase = kf.flourishPhase || 0;
         sheathSuction = kf.sheathSuction || 0;
         sheathStar = kf.sheathStar || 0;
         orbitFXPhase = kf.orbitFXPhase != null ? kf.orbitFXPhase : -1;
@@ -3798,22 +3999,32 @@
         slamBurst = kf.slamBurst || 0;
         shoulderDx = kf.shoulderDx || 0;
         shoulderDy = kf.shoulderDy || 0;
-        if (kf.trailFrom != null) {
-          trailFrom = kf.trailFrom + aimRot;
+        const spinFlip = !!kf.spinFlip;
+        const somersaultPhi = kf.somersaultPhi || 0;
+        const hopY = kf.hopY || 0;
+        if (kf.offTrailFrom != null) {
+          offTrailFrom = kf.offTrailFrom + effAimRot;
+        }
+        if (kf.trailFrom != null || kf.offTrailFrom != null) {
+          if (kf.trailFrom != null) trailFrom = kf.trailFrom + effAimRot;
           slashArc = p;
           if (kf.slashType) {
             slashType = kf.slashType;
           } else {
             slashType =
               act === 'combo1' || act === 'swing'
-                ? 'horiz'
+                ? 'swordHoriz3D'
                 : act === 'combo2'
-                ? 'diagUp'
-                : act === 'combo3' || act === 'combo4'
-                ? 'heavySlam'
-                : 'skillWave';
+                ? 'swordUp3D'
+                : act === 'combo3'
+                ? 'swordCleave3D'
+                : act === 'combo4'
+                ? 'swordThrust3D'
+                : 'swordFlourish3D';
           }
         }
+        const userAng = 90 - (gunAng - effAimRot);
+        return { id: mId, aim, aimRot: effAimRot, act, p, na, fa, gunAng, edgeDir, offAng, offEdgeDir, offFront, offTrailFrom, dualPhase, userAng, lean, bob, slideBack, flash, casing, magDrop, handMag, magLockGlow, rackGlint, slashArc, slashType, slashStyle: slashType, slashRetract, whirlPhase, flourishPhase, spinFlip, somersaultPhi, hopY, bladeScale, twoHand, chargeLv, spinPhase, idleGlint, trailFrom, spinRing, slamBurst, shoulderDx, shoulderDy, sheathed, shoulderCarry, sheathSuction, sheathStar, orbitFXPhase, crouchStance, martialStance };
       } else {
         // 侧面持武瞄准/移动姿态（长剑）：手臂与武器以肩膀为支点随鼠标 360° 旋转
         na = [-12 + aimRot, 48 + aimRot];
@@ -3821,7 +4032,7 @@
         gunAng = 114 + aimRot;
       }
       const userAng = 90 - (gunAng - aimRot);
-      return { id: mId, aim, aimRot, act, p, na, fa, gunAng, edgeDir, userAng, lean, bob, slideBack, flash, casing, magDrop, handMag, magLockGlow, rackGlint, slashArc, slashType, slashStyle: slashType, slashRetract, bladeScale, twoHand, chargeLv, spinPhase, idleGlint, trailFrom, spinRing, slamBurst, shoulderDx, shoulderDy, sheathed, shoulderCarry, sheathSuction, sheathStar, orbitFXPhase, crouchStance, martialStance };
+      return { id: mId, aim, aimRot, act, p, na, fa, gunAng, edgeDir, offAng, offEdgeDir, offFront, offTrailFrom, dualPhase, userAng, lean, bob, slideBack, flash, casing, magDrop, handMag, magLockGlow, rackGlint, slashArc, slashType, slashStyle: slashType, slashRetract, whirlPhase, flourishPhase, spinFlip: false, somersaultPhi: 0, hopY: 0, bladeScale, twoHand, chargeLv, spinPhase, idleGlint, trailFrom, spinRing, slamBurst, shoulderDx, shoulderDy, sheathed, shoulderCarry, sheathSuction, sheathStar, orbitFXPhase, crouchStance, martialStance };
     }
 
     if (act === 'idle' || (v34 && act === 'aim')) {
@@ -3886,7 +4097,7 @@
     const pureWhite = '#ffffff', edgeWhite = '#eef1f6', pureSilver = '#dce1eb', midMist = '#b8bfd0', steelLight = '#9aa1b0', shatterMid = '#686e7c', shatterDark = '#4a4f5c';
     const putF = (x, y, col) => {
       const rx = Math.round(x), ry = Math.round(y);
-      if (ry < 2 || ry > 75) return;
+      if (ry < 2 || ry >= GH - 1) return;
       put(gFx, rx, ry, col);
     };
     const aimRot = (aimDeg != null ? aimDeg : 90) - 90;
@@ -3971,19 +4182,264 @@
    * 2) 刀光宽度严格「距刀越远越细」：从当前刀头端 (uNorm=1, 最宽) 向起手尾端 (uNorm=0, 最远) 按幂函数 uNorm^1.42 单调收细至 1px 针尖；
    * 3) 毛边与模糊柔化效果 (Feathered Burrs & Motion Blur)：外弧与内缘均带有切向飞散毛边细丝，横截面采用 7 阶柔和模糊渐变 (#ffffff → #eef1f6 → #dce1eb → #b8bfd0 → #9aa1b0 → #686e7c → #4a4f5c)；
    * 4) 配合三拍帧节奏：劈砍到位帧显示满幅刀光 (slashRetract=0)，下一帧武器位置保持不变、刀光收回一半 (slashRetract=0.5)！ */
-  function drawSlashTrail(gWep, hx, hyW, wp) {
-    if (wp.trailFrom == null || !wp.slashType) return;
+  function drawSlashTrail(gWep, hx, hyW, wp, gBack) {
+    const isDualSlash =
+      wp.slashType === 'dualAlt3D' ||
+      wp.slashType === 'dualCross3D' ||
+      wp.slashType === 'dualSpin3D' ||
+      wp.slashType === 'dualRend3D' ||
+      wp.slashType === 'dualDance3D';
+    if (!wp.slashType || (wp.trailFrom == null && wp.offTrailFrom == null)) return;
     const pureWhite = '#ffffff', edgeWhite = '#eef1f6', pureSilver = '#dce1eb', midMist = '#b8bfd0', steelLight = '#9aa1b0', shatterMid = '#686e7c', shatterDark = '#4a4f5c';
     const rMax = 13.0;
-    const a0 = wp.trailFrom, a1 = wp.gunAng;
+    const a0 = wp.trailFrom != null ? wp.trailFrom : wp.gunAng;
+    const a1 = wp.gunAng;
     const diff = a1 - a0;
-    if (Math.abs(diff) < 3) return;
+    if (!isDualSlash && Math.abs(diff) < 3) return;
     const retract = clamp(wp.slashRetract || 0, 0, 0.92);
     const putS = (x, y, col) => {
       const rx = Math.round(x), ry = Math.round(y);
-      if (ry < 2 || ry > 75) return;
+      if (ry < 2 || ry >= GH - 1) return;
       put(gWep, rx, ry, col);
     };
+    const putSB = (x, y, col, toBack) => {
+      const rx = Math.round(x), ry = Math.round(y);
+      if (ry < 2 || ry >= GH - 1) return;
+      put(toBack && gBack ? gBack : gWep, rx, ry, col);
+    };
+
+    // ─── 铁质双刀专属 3D 刀光渲染集群 (dualAlt3D / dualCross3D / dualSpin3D / dualRend3D / dualDance3D) ───
+    // 锚定左右双曲剑刀尖 (rDual = 13.8px)，纯白外锋 (#ffffff / #eef1f6) + 冷银流雾 (#dce1eb / #b8bfd0 / #9aa1b0)，严格遵循「距刀越远越细」与「依次出现/十字交错/定格收半」！
+    if (isDualSlash) {
+      const rDual = 13.8;
+      const hxF = wp._hxF != null ? wp._hxF : hx;
+      const hyWF = wp._hyWF != null ? wp._hyWF : hyW;
+      const aimRotDeg = wp.aimRot || 0;
+      const rotRad = rad(aimRotDeg);
+      const ca = Math.cos(rotRad), sa = Math.sin(rotRad);
+
+      // 通用单柄猎鹰弯刀 3D 倾斜月牙弧绘制器（100% 吸附于指定手腕 (cx, cy) 与弯刀终点角 angEndDeg）
+      const renderCurvedArc3D = (cx, cy, angStartDeg, angEndDeg, eDirVal, maxBand, tilt3D, toBackLayer) => {
+        const dAng = angEndDeg - angStartDeg;
+        if (Math.abs(dAng) < 4) return;
+        const arcSteps = 68;
+        for (let s = 0; s <= arcSteps; s++) {
+          const t = s / arcSteps;
+          const curDeg = angStartDeg + dAng * t;
+          const ang = rad(curDeg);
+          const ux = Math.sin(ang), uy = Math.cos(ang);
+          const nx = uy, ny = -ux;
+          const perspScale = 1.0 - (1.0 - tilt3D) * Math.sin(Math.PI * (1 - t)) * (1 - t * t);
+          const uOuter = rDual * perspScale;
+          const curveTip = Math.pow(clamp((uOuter - 4.0) / 9.8, 0, 1), 1.4) * 1.85;
+          const vShift = -eDirVal * curveTip * 0.55;
+          const bandW = 0.50 + maxBand * Math.pow(t, 1.38);
+          const uIn = Math.max(2.6, uOuter - bandW);
+
+          if (t >= 0.22 && t <= 0.94 && s % 4 === 0) {
+            const burrBack = (s % 8 === 0 ? 1.3 : 0.8) * (dAng >= 0 ? -1 : 1);
+            putSB(
+              cx + (uOuter + 0.5) * ux + (vShift + burrBack) * nx,
+              cy + (uOuter + 0.5) * uy + (vShift + burrBack) * ny,
+              s % 8 === 0 ? pureSilver : steelLight,
+              toBackLayer
+            );
+          }
+
+          for (let r = uOuter; r >= uIn; r -= 0.62) {
+            const dOuter = uOuter - r;
+            const tRad = bandW > 0.1 ? dOuter / bandW : 0;
+            const ringIdx = Math.round(dOuter * 1.5);
+            if (dOuter > 1.35) {
+              if (ringIdx % 3 === 2 && t < 0.86) continue;
+              if (t < 0.30 && (s + ringIdx) % 2 === 1) continue;
+              if (tRad > 0.72 && (s + ringIdx) % 2 === 0) continue;
+            }
+            let col;
+            if (dOuter <= 1.35) {
+              col = t >= 0.78 ? pureWhite : t >= 0.16 ? edgeWhite : pureSilver;
+            } else if (tRad <= 0.44) {
+              col = t >= 0.45 ? edgeWhite : t >= 0.20 ? pureSilver : midMist;
+            } else if (tRad <= 0.76) {
+              col = t >= 0.64 ? pureSilver : midMist;
+            } else {
+              col = steelLight;
+            }
+            const rCurve = r > 4.0 ? Math.pow(clamp((r - 4.0) / 9.8, 0, 1), 1.4) * 1.85 : 0;
+            const rv = -eDirVal * rCurve * 0.55;
+            putSB(cx + r * ux + rv * nx, cy + r * uy + rv * ny, col, toBackLayer);
+          }
+        }
+      };
+
+      // 通用 3D 扁平椭圆横扫/旋风环绘制器（围绕手腕局部系随鼠标 aimRot 同步旋转，自动把后背弧段分发到 gBack）
+      const renderEllipseSweep3D = (cx, cy, tiltDeg, rx, ry, aStartLocal, aSpanLocal, headU, tailU, wMax, fade) => {
+        const tRadTilt = rad(tiltDeg);
+        const ct = Math.cos(tRadTilt), st = Math.sin(tRadTilt);
+        const eSteps = 64;
+        for (let s = 0; s <= eSteps; s++) {
+          const uN = s / eSteps;
+          const arcFrac = tailU + (headU - tailU) * uN;
+          const th = rad(aStartLocal + aSpanLocal * arcFrac);
+          const ex = Math.sin(th) * rx;
+          const ey = Math.cos(th) * ry;
+          const lx0 = 1.8 + ex * ct - ey * st;
+          const ly0 = ex * st + ey * ct;
+          const len = Math.hypot(ex, ey) || 1;
+          const lnx = (ex * ct - ey * st) / len;
+          const lny = (ex * st + ey * ct) / len;
+          const tx = -lny, ty = lnx;
+          const toBack = lx0 < -0.8;
+
+          if (uN > 0.28 && s % 4 === 0 && fade > 0.65) {
+            const burr = (s % 8 === 0 ? 1.1 : 0.6) * fade;
+            const bx = lx0 + lnx * 0.55 - tx * burr;
+            const by = ly0 + lny * 0.55 - ty * burr;
+            putSB(cx + bx * ca + by * sa, cy - bx * sa + by * ca, pureSilver, toBack);
+          }
+
+          const bW = Math.max(0.55, wMax * Math.pow(uN, 1.34) * fade);
+          for (let d = 0; d <= bW; d += 0.58) {
+            const lx = lx0 - lnx * d;
+            const ly = ly0 - lny * d;
+            let col;
+            if (d <= 0.9) {
+              col = uN > 0.60 ? pureWhite : uN > 0.22 ? edgeWhite : pureSilver;
+            } else if (d <= 1.85) {
+              col = uN > 0.40 ? edgeWhite : pureSilver;
+            } else {
+              if (s % 2 === 1) continue;
+              col = d <= 2.5 ? midMist : steelLight;
+            }
+            putSB(cx + lx * ca + ly * sa, cy - lx * sa + ly * ca, col, toBack);
+          }
+        }
+      };
+
+      // (A) 一段·交替二连斜斩 (dualAlt3D)：dp=1 仅绘副手左刀斜下劈，dp=2 仅绘主手右刀反向斜上撩（严格依次出现、绝不堆叠）
+      if (wp.slashType === 'dualAlt3D') {
+        const band = 7.8 * (1 - 0.28 * retract);
+        if (wp.dualPhase === 1 && wp.offTrailFrom != null) {
+          renderCurvedArc3D(hxF, hyWF, wp.offTrailFrom, wp.offAng, wp.offEdgeDir, band, 0.80, !wp.offFront);
+        } else if (wp.trailFrom != null) {
+          renderCurvedArc3D(hx, hyW, wp.trailFrom, wp.gunAng, wp.edgeDir, band, 0.82, false);
+        }
+        return;
+      }
+
+      // (B) 二段·剪刀十字交叉斩 (dualCross3D)：左右双曲剑同时反向内剪，绘出立体相交的『X』双月牙与交点寒星！
+      if (wp.slashType === 'dualCross3D') {
+        const band = 7.2 * (1 - 0.28 * retract);
+        if (wp.offTrailFrom != null) {
+          renderCurvedArc3D(hxF, hyWF, wp.offTrailFrom, wp.offAng, wp.offEdgeDir, band, 0.78, false);
+        }
+        if (wp.trailFrom != null) {
+          renderCurvedArc3D(hx, hyW, wp.trailFrom, wp.gunAng, wp.edgeDir, band, 0.78, false);
+        }
+        // 十字剪刀斩中心交点四芒寒星（随收半同步收敛）
+        if (retract <= 0.55) {
+          const sxL = 10.6, syL = 0.0;
+          const scx = Math.round(hx + sxL * ca + syL * sa);
+          const scy = Math.round(hyW - sxL * sa + syL * ca);
+          const arm = retract < 0.2 ? 3 : 2;
+          putS(scx, scy, pureWhite);
+          for (let k = 1; k <= arm; k++) {
+            const cStar = k === 1 ? pureWhite : k === 2 ? edgeWhite : pureSilver;
+            putS(scx + k, scy, cStar);
+            putS(scx - k, scy, cStar);
+            putS(scx, scy + k, cStar);
+            putS(scx, scy - k, cStar);
+          }
+        }
+        return;
+      }
+
+      // (C) 三段·旋风陀螺·360°双刃回旋斩 (dualSpin3D)：贴地双层交错椭圆陀螺风暴环（后半环入 gBack、前半环入 gWep）
+      if (wp.slashType === 'dualSpin3D') {
+        const fade = 1 - 0.26 * retract;
+        if (wp.dualPhase === 1) {
+          // F2 转身蓄旋半圈
+          renderEllipseSweep3D(hx, hyW, -8, 15.8, 4.4, -170, 210, 1.0, 0.0, 3.4, 0.92);
+          renderEllipseSweep3D(hxF, hyWF, 8, 14.8, 4.0, 10, 200, 1.0, 0.0, 3.0, 0.88);
+        } else {
+          // F3..F5 完整 360° 双刀陀螺双环回旋 + Beat 3 定格收半
+          renderEllipseSweep3D(hx, hyW, -7, 16.6, 4.8, -162, 296, 1.0, retract, 3.9, fade);
+          renderEllipseSweep3D(hxF, hyWF, 9, 15.4, 4.4, 24, 286, 1.0, retract, 3.4, fade * 0.94);
+        }
+        return;
+      }
+
+      // (D) 四段·飞身双翼·腾空撕裂重斩 (dualRend3D)：凌空双翼下劈并列双月牙巨弧 + 双刀尖裂空寒芒
+      if (wp.slashType === 'dualRend3D') {
+        const band = 8.4 * (1 - 0.28 * retract);
+        if (wp.offTrailFrom != null) {
+          renderCurvedArc3D(hxF, hyWF, wp.offTrailFrom, wp.offAng, wp.offEdgeDir, band * 0.90, 0.84, false);
+        }
+        if (wp.trailFrom != null) {
+          renderCurvedArc3D(hx, hyW, wp.trailFrom, wp.gunAng, wp.edgeDir, band, 0.86, false);
+        }
+        if (wp.slamBurst > 0) {
+          const angM = rad(wp.gunAng);
+          const uxM = Math.sin(angM), uyM = Math.cos(angM);
+          const nxM = uyM, nyM = -uxM;
+          const tipX = hx + uxM * rDual, tipY = hyW + uyM * rDual;
+          const hB = Math.max(1, Math.round(3 * wp.slamBurst));
+          putS(tipX, tipY, pureWhite);
+          for (let k = 1; k <= hB; k++) {
+            const cB = k === 1 ? pureWhite : k === 2 ? edgeWhite : pureSilver;
+            putS(tipX + nxM * k, tipY + nyM * k, cB);
+            putS(tipX - nxM * k, tipY - nyM * k, cB);
+            putS(tipX + uxM * k, tipY + uyM * k, cB);
+          }
+        }
+        return;
+      }
+
+      // (E) 右键秘技·鬼人乱舞 (dualDance3D)：
+      //     dp=1..2 第1斩右刃斜下劈 → dp=3..4 第2斩左刃反挑 → dp=5..6 第3斩右刃贴地平扫 → dp=7..8 第4斩旋身反手回环 → dp=9..12 第5斩终结双翼十字裂空！
+      //     前四斩严格依次单道出现、前消后现，终结第5斩双刃齐出划出震撼『X』十字裂空！
+      if (wp.slashType === 'dualDance3D') {
+        const dp = wp.dualPhase || 1;
+        const band = 7.6 * (1 - 0.28 * retract);
+        if (dp === 1 || dp === 2) {
+          // 第 1 斩：主手右刀斜下劈
+          renderCurvedArc3D(hx, hyW, wp.trailFrom, wp.gunAng, wp.edgeDir, band, 0.80, false);
+        } else if (dp === 3 || dp === 4) {
+          // 第 2 斩：副手左刀反手掠月上挑（第1斩已消散）
+          renderCurvedArc3D(hxF, hyWF, wp.offTrailFrom, wp.offAng, wp.offEdgeDir, band, 0.80, false);
+        } else if (dp === 5 || dp === 6) {
+          // 第 3 斩：主手右刀贴地 3D 扁椭圆平扫（第2斩已消散）
+          renderEllipseSweep3D(hx, hyW, -6, 16.4, 4.6, -150, 268, 1.0, retract, 3.8, 1 - 0.22 * retract);
+        } else if (dp === 7 || dp === 8) {
+          // 第 4 斩：鬼人旋身反手回环斩（第3斩已消散）
+          renderEllipseSweep3D(hxF, hyWF, 15, 16.8, 5.2, -158, 282, 1.0, retract, 3.8, 1 - 0.25 * retract);
+        } else if (dp >= 9) {
+          // 第 5 斩终结：双翼十字裂空重斩（双刀齐出交织大『X』+ 中心寒星迸射）
+          const finBand = 8.4 * (1 - 0.28 * retract);
+          if (wp.offTrailFrom != null) {
+            renderCurvedArc3D(hxF, hyWF, wp.offTrailFrom, wp.offAng, wp.offEdgeDir, finBand, 0.82, false);
+          }
+          if (wp.trailFrom != null) {
+            renderCurvedArc3D(hx, hyW, wp.trailFrom, wp.gunAng, wp.edgeDir, finBand, 0.82, false);
+          }
+          if (retract <= 0.60) {
+            const sxL = 11.2, syL = 0.0;
+            const scx = Math.round(hx + sxL * ca + syL * sa);
+            const scy = Math.round(hyW - sxL * sa + syL * ca);
+            const arm = retract < 0.2 ? 4 : retract < 0.55 ? 2 : 1;
+            putS(scx, scy, pureWhite);
+            for (let k = 1; k <= arm; k++) {
+              const cStar = k <= 2 ? pureWhite : k === 3 ? edgeWhite : pureSilver;
+              putS(scx + k, scy, cStar);
+              putS(scx - k, scy, cStar);
+              putS(scx, scy + k, cStar);
+              putS(scx, scy - k, cStar);
+            }
+          }
+        }
+        return;
+      }
+    }
 
     // ─── 长刀第1段 (katanaHoriz3D / katanaRef4)：复用右键三连斩中间那道 3D 扁平椭圆横月牙剑气，前端 100% 贴合太刀刀尖与前段刃口，且整道扁月牙围绕握持点随鼠标瞄准角度 (aimRot) 100% 同步旋转！ ───
     if (wp.slashType === 'katanaHoriz3D' || wp.slashType === 'katanaRef4' || wp.slashType === 'katanaX') {
@@ -4186,8 +4642,120 @@
       return;
     }
 
+    // ─── 超巨型铁质大剑第2段 (gsWideSweep3D) & 第4段终结技 360° 大回旋斩 (gsWhirlwind3D) ───
+    // 严格在局部 (sin, cos) 平面锚定 24.5px 门板巨剑剑尖，围绕握持点 (hx, hyW) 随鼠标 aimRot 100% 同步旋转；
+    // 第4段 gsWhirlwind3D 采用 3D 环身飓风椭圆投影：后半圈写入 gBack 绕过角色后背，前半圈写入 gWep 横扫身前并与巨剑无缝融合！
+    if (wp.slashType === 'gsWideSweep3D' || wp.slashType === 'gsWhirlwind3D') {
+      const isWhirl = wp.slashType === 'gsWhirlwind3D';
+      const wPhase = wp.whirlPhase || (isWhirl ? 2 : 0);
+      const aimRotDeg = wp.aimRot || 0;
+      const rotRad = rad(aimRotDeg);
+      const ca = Math.cos(rotRad), sa = Math.sin(rotRad);
+      const baseAngDeg = a1 - aimRotDeg;
+      const baseRad = rad(baseAngDeg);
+      const uxB = Math.sin(baseRad), uyB = Math.cos(baseRad);
+      const bladeLocalPt = (uVal) => [uVal * uxB, uVal * uyB];
+      const tipLocal = bladeLocalPt(24.5);
+
+      const ang1Local = baseAngDeg;
+      const ang0Local = isWhirl
+        ? (wPhase === 1 ? baseAngDeg + 180 : baseAngDeg - 348)
+        : -82;
+      const rx = isWhirl ? 28.5 : 26.5;
+      const ry = isWhirl ? 7.6 : 6.6;
+      const tiltLocalRad = rad(isWhirl ? -4 : -6);
+      const ct = Math.cos(tiltLocalRad), st = Math.sin(tiltLocalRad);
+
+      const thEnd = rad(ang1Local);
+      const exEnd = Math.sin(thEnd) * rx, eyEnd = Math.cos(thEnd) * ry;
+      const rawEndX = exEnd * ct - eyEnd * st;
+      const rawEndY = exEnd * st + eyEnd * ct;
+      const anchorDx = tipLocal[0] - rawEndX;
+      const anchorDy = tipLocal[1] - rawEndY;
+
+      const tailU = retract;
+      const headU = 1.0;
+      const fadeScale = 1 - 0.25 * retract;
+      const maxBand = (isWhirl ? 8.8 : 8.2) * fadeScale;
+      const steps = isWhirl ? 128 : 84;
+
+      for (let s = 0; s <= steps; s++) {
+        const uNorm = s / steps; // 0 = 最远尾尖，1 = 紧贴 24.5px 巨剑剑身前端
+        const arcU = tailU + (headU - tailU) * uNorm;
+        const theta = rad(ang0Local + (ang1Local - ang0Local) * arcU);
+        const ex = Math.sin(theta) * rx;
+        const ey = Math.cos(theta) * ry;
+        const lx0 = anchorDx + ex * ct - ey * st;
+        const ly0 = anchorDy + ex * st + ey * ct;
+
+        // 3D 环身深度判定：回旋斩处于角色腰背上后方椭圆弧段 (cos(theta) < -0.18 且未接近当前前挥剑刃) 绘制到 gBack 后层，形成真 3D 环绕躯干立体透视
+        const isRearHalf = isWhirl && Math.cos(theta) < -0.18 && uNorm < 0.86;
+
+        const len = Math.hypot(ex, ey) || 1;
+        const lnx = (ex * ct - ey * st) / len;
+        const lny = (ex * st + ey * ct) / len;
+        const ltx = -lny, lty = lnx;
+
+        const sawJit = (s % 5 === 0 ? 0.9 : s % 3 === 0 ? -0.45 : 0) * (1 - uNorm * 0.45);
+        const bandW = Math.max(0.65, maxBand * Math.pow(uNorm, 1.38) + sawJit);
+        const bladeAttachW = arcU > 0.78 ? Math.pow((arcU - 0.78) / 0.22, 1.35) : 0;
+
+        // 外缘狂风飞散毛边
+        if (uNorm > 0.16 && s % 2 === 0) {
+          const burrLen = (s % 4 === 0 ? 2.0 : 1.1) * fadeScale;
+          const blx = lx0 + lnx * 0.9 - ltx * burrLen;
+          const bly = ly0 + lny * 0.9 - lty * burrLen;
+          putSB(
+            hx + blx * ca + bly * sa,
+            hyW - blx * sa + bly * ca,
+            s % 4 === 0 ? pureWhite : pureSilver,
+            isRearHalf
+          );
+        }
+
+        for (let d = 0; d <= bandW; d += 0.55) {
+          const tRad = bandW > 0.1 ? d / bandW : 0;
+          let lx = lx0 - lnx * d;
+          let ly = ly0 - lny * d;
+          if (bladeAttachW > 0) {
+            const bPt = bladeLocalPt(Math.max(3.5, 24.5 - d * 1.65));
+            lx = lx * (1 - bladeAttachW) + bPt[0] * bladeAttachW;
+            ly = ly * (1 - bladeAttachW) + bPt[1] * bladeAttachW;
+          }
+          const rxPt = hx + lx * ca + ly * sa;
+          const ryPt = hyW - lx * sa + ly * ca;
+          let col;
+          if (d <= 1.3) {
+            col = uNorm < 0.14 ? pureSilver : uNorm < 0.28 ? edgeWhite : pureWhite;
+          } else if (d <= 2.7) {
+            col = uNorm < 0.22 ? midMist : edgeWhite;
+          } else if (d <= 4.3) {
+            col = d <= 3.5 ? pureSilver : midMist;
+          } else {
+            if ((s + Math.round(d * 2)) % 3 === 0) continue;
+            col = tRad <= 0.65 ? steelLight : tRad <= 0.84 ? shatterMid : shatterDark;
+          }
+          putSB(rxPt, ryPt, col, isRearHalf);
+        }
+
+        // 内圈高速旋风流线（增强 360° 大回旋斩飓风气浪感）
+        if (isWhirl && wPhase === 2 && uNorm >= 0.18 && uNorm <= 0.92 && s % 3 === 1) {
+          const vortexD = bandW + 2.2 + (s % 2) * 1.1;
+          const vlx = lx0 - lnx * vortexD - ltx * 0.9;
+          const vly = ly0 - lny * vortexD - lty * 0.9;
+          putSB(
+            hx + vlx * ca + vly * sa,
+            hyW - vlx * sa + vly * ca,
+            s % 6 === 1 ? pureSilver : shatterMid,
+            isRearHalf
+          );
+        }
+      }
+      return;
+    }
+
     // ─── 超巨型铁质大剑 (Greatsword) 3D 势大力沉刀光系统 (gsColossalUp3D / gsEarthShatter3D / gsTectonic3D / gsHeavyDown / gsHeavyUp / gsHorizWall) ───
-    // 严格延用 3D 透视建模 + 距刀越远越细 (t^1.38) + 内外切向毛边与 7 阶动态模糊 + 巨剑专属重型锯齿内缘与裂地碎石激波，100% 贴合 21.5px 超宽巨剑！
+    // 严格延用 3D 透视建模 + 距刀越远越细 (t^1.38) + 内外切向毛边与 7 阶动态模糊 + 巨剑专属重型锯齿内缘，100% 贴合 24.5px 超宽巨剑（已彻底移除地面 y=75 突兀死板白横线）！
     if (
       wp.slashType === 'gsColossalUp3D' ||
       wp.slashType === 'gsEarthShatter3D' ||
@@ -4198,11 +4766,11 @@
     ) {
       const isEarthSlam = wp.slashType === 'gsEarthShatter3D' || wp.slashType === 'gsHeavyDown';
       const isTectonic = wp.slashType === 'gsTectonic3D' || wp.slashType === 'gsHorizWall';
-      // 巨剑刀身处最大径向刀光宽度高达 14.5~16.2px（势大力沉，比普通剑与太刀更宽厚），在 retract=0.5 时同步内收
+      // 巨剑刀身处最大径向刀光宽度高达 14.8~16.2px（势大力沉，比普通剑与太刀更宽厚），在 retract=0.5 时同步内收
       const maxBladeBand = (isEarthSlam ? 16.2 : isTectonic ? 15.0 : 14.8) * (1 - 0.28 * retract);
-      // 3D 斜面椭圆压缩率：t=1 (当前巨剑所在位置) 严格为 1.0 以 100% 贴合 21.5px 巨剑剑身，中后段呈 3D 透视宽厚椭圆弧
+      // 3D 斜面椭圆压缩率：t=1 (当前巨剑所在位置) 严格为 1.0 以 100% 贴合 24.5px 巨剑剑尖，中后段呈 3D 透视宽厚椭圆弧
       const tilt3D = isEarthSlam ? 0.86 : isTectonic ? 0.72 : 0.78;
-      const steps = 104;
+      const steps = 108;
 
       for (let s = 0; s <= steps; s++) {
         const t = s / steps; // t=0 为最远端尾尖 (a0)，t=1 为当前巨剑剑身处 (a1 = wp.gunAng)
@@ -4212,7 +4780,7 @@
         const nx = uy, ny = -ux;
 
         const perspScale = 1.0 - (1.0 - tilt3D) * Math.sin(Math.PI * (1 - t)) * (1 - t * t);
-        const uOuter = 21.5 * perspScale;
+        const uOuter = 24.5 * perspScale;
 
         // 刀光宽度严格遵循「距刀越远越细」(t^1.38)，叠加巨剑狂暴重型锯齿内缘与毛边抖动
         const toothPhase = s % 6;
@@ -4268,193 +4836,349 @@
           putS(sx - ux * 1.0, sy - uy * 1.0, shatterDark);
         }
       }
+      return;
+    }
 
-      // 底部触地裂地激波：在角色正前方地面 (y = 73..75) 铺设超长触地刀光带与震地崩裂碎石尖刺
-      const aimRot = wp.aimRot || 0;
-      if (Math.abs(aimRot) <= 25) {
-        const groundSpan = Math.round(22 * (1 - 0.35 * retract));
-        for (let dx = 1; dx <= groundSpan; dx++) {
-          putS(hx + dx, 75, dx <= groundSpan - 3 ? pureWhite : edgeWhite);
-          if (dx >= 2 && dx <= groundSpan - 1) {
-            putS(hx + dx, 74, dx % 2 === 0 ? pureSilver : steelLight);
+    // ─── 修长铁质长剑 (17.5px) 专属 3D 刀光与「流云千瓣剑花」渲染器 ───
+    const rSword = 17.5;
+
+    // 1) 一段·疾风平斩 (swordHoriz3D / horiz)：锚定在 17.5px 加长剑尖上的 3D 透视水平环腰新月弧 + 前方锐利破空剑芒针尖
+    if (wp.slashType === 'swordHoriz3D' || wp.slashType === 'horiz') {
+      const aimRotDeg = wp.aimRot || 0;
+      const rotRad = rad(aimRotDeg);
+      const ca = Math.cos(rotRad), sa = Math.sin(rotRad);
+      const baseAngDeg = a1 - aimRotDeg;
+      const baseRad = rad(baseAngDeg);
+      const uxB = Math.sin(baseRad), uyB = Math.cos(baseRad);
+      const tipLocalX = rSword * uxB, tipLocalY = rSword * uyB;
+
+      const ang0Local = -114;
+      const ang1Local = baseAngDeg;
+      const rx = 18.8;
+      const ry = 4.6;
+      const thEnd = rad(ang1Local);
+      const rawEndX = Math.sin(thEnd) * rx, rawEndY = Math.cos(thEnd) * ry;
+      const anchorDx = tipLocalX - rawEndX;
+      const anchorDy = tipLocalY - rawEndY;
+
+      const tailU = retract;
+      const fadeScale = 1 - 0.25 * retract;
+      const steps = 64;
+      for (let s = 0; s <= steps; s++) {
+        const uNorm = s / steps;
+        const arcU = tailU + (1.0 - tailU) * uNorm;
+        const theta = rad(ang0Local + (ang1Local - ang0Local) * arcU);
+        const ex = Math.sin(theta) * rx;
+        const ey = Math.cos(theta) * ry;
+        const lx0 = anchorDx + ex;
+        const ly0 = anchorDy + ey;
+        const len = Math.hypot(ex, ey) || 1;
+        const lnx = ex / len, lny = ey / len;
+        const ltx = -lny, lty = lnx;
+
+        const bandW = Math.max(0.55, 5.0 * Math.pow(uNorm, 1.38) * fadeScale);
+        const bladeAttachW = arcU > 0.72 ? Math.pow((arcU - 0.72) / 0.28, 1.35) : 0;
+        const toBack = theta < rad(-25);
+
+        if (uNorm > 0.22 && s % 3 === 0) {
+          const burrLen = (s % 2 === 0 ? 1.4 : 0.8) * fadeScale;
+          const blx = lx0 + lnx * 0.8 - ltx * burrLen;
+          const bly = ly0 + lny * 0.8 - lty * burrLen;
+          putSB(hx + blx * ca + bly * sa, hyW - blx * sa + bly * ca, s % 6 === 0 ? pureSilver : steelLight, toBack);
+        }
+
+        for (let d = 0; d <= bandW; d += 0.55) {
+          const tRad = bandW > 0.1 ? d / bandW : 0;
+          let lx = lx0 - lnx * d;
+          let ly = ly0 - lny * d;
+          if (bladeAttachW > 0) {
+            const bU = Math.max(3.5, rSword - d * 1.35);
+            lx = lx * (1 - bladeAttachW) + bU * uxB * bladeAttachW;
+            ly = ly * (1 - bladeAttachW) + bU * uyB * bladeAttachW;
           }
-          if (isEarthSlam && dx % 4 === 1 && dx <= groundSpan - 2) {
-            putS(hx + dx, 73, dx <= 10 ? edgeWhite : shatterMid);
-            if (dx <= 14) putS(hx + dx + 1, 72, shatterDark);
+          const rxPt = hx + lx * ca + ly * sa;
+          const ryPt = hyW - lx * sa + ly * ca;
+          let col;
+          if (d <= 1.1) {
+            col = uNorm < 0.14 ? pureSilver : edgeWhite;
+          } else if (d <= 2.2) {
+            col = uNorm < 0.24 ? midMist : (d <= 1.65 ? edgeWhite : pureSilver);
+          } else if (d <= 3.4) {
+            col = d <= 2.8 ? pureSilver : midMist;
+          } else {
+            if ((s + Math.round(d * 2)) % 3 === 0) continue;
+            col = tRad <= 0.75 ? midMist : steelLight;
           }
+          putSB(rxPt, ryPt, col, toBack);
+        }
+      }
+
+      // 加长剑尖正前方锐利破空纯白剑芒针尖（延伸 +5px，在收半帧同步内敛）
+      const spikeLen = retract < 0.3 ? 5 : retract < 0.65 ? 3 : 1;
+      const angNow = rad(wp.gunAng);
+      const uxN = Math.sin(angNow), uyN = Math.cos(angNow);
+      const nxN = uyN, nyN = -uxN;
+      for (let su = 1; su <= spikeLen; su++) {
+        const uCur = rSword + su;
+        putS(hx + uCur * uxN, hyW + uCur * uyN, su === 1 ? pureWhite : edgeWhite);
+        if (su <= 2) {
+          putS(hx + uCur * uxN + 0.7 * nxN, hyW + uCur * uyN + 0.7 * nyN, pureSilver);
+          putS(hx + uCur * uxN - 0.7 * nxN, hyW + uCur * uyN - 0.7 * nyN, pureSilver);
         }
       }
       return;
     }
 
-    if (wp.slashType === 'horiz') {
+    // 2) 四段终结·回风贯日刺 (swordThrust3D)：沿 17.5px 剑身向前爆发纯白贯日长枪剑芒 + 两道 3D 透视椭圆回风气旋环
+    if (wp.slashType === 'swordThrust3D') {
       const ang = rad(wp.gunAng);
       const ux = Math.sin(ang), uy = Math.cos(ang);
-      // 垂直于挥砍前向的画面下方法向 (dnX, dnY)：当水平朝右 (gunAng=90°) 时，(ux,uy)=(1,0)，(dnX,dnY)=(0,1)
-      const dnX = -uy, dnY = ux;
-      const putH = (u, d, col) => {
-        const px = hx + u * ux + d * dnX;
-        const py = clamp(hyW + u * uy + d * dnY, 34, 75.5);
-        put(gWep, px, py, col);
-      };
-      const isPeak = Math.abs(diff) >= 175;
+      const nx = uy, ny = -ux;
+      const fade = 1 - 0.45 * retract;
+      const lanceTip = rSword + Math.round(9.5 * fade);
+      const lanceStart = 3.0 + retract * 5.0;
 
-      // 1) 后背收尖新月尾 + 细碎流线残影（尾端从 1px 锐利尖梢渐宽，内侧带镂空细碎剑气纹）
-      if (isPeak) {
-        // 刀光尾尖梢 (d = -3..-2)：在肩背上方收束成纤细尖尾
-        putH(-9, -3, steelLight);
-        putH(-10, -3, pureSilver);
-        for (let u = -12; u <= -7; u++) {
-          putH(u, -2, u <= -10 ? edgeWhite : (u % 2 === 0 ? pureSilver : steelLight));
-        }
-        // C 弧中段：外缘纯白，内缘做细碎断续流线纹理与渐变
-        for (let d = -1; d <= 2; d++) {
-          const uLeft = d === 0 || d === 1 ? -14 : d === -1 ? -13 : -12;
-          const uRight = d === -1 ? -7 : -5;
-          for (let u = uLeft; u <= uRight; u++) {
-            const distFromOuter = u - uLeft;
-            // 在内侧刻出细碎空气流线间隙，避免死板色块
-            if (distFromOuter >= 3 && (u + d * 2) % 3 === 0) continue;
-            const col = distFromOuter <= 1
-              ? edgeWhite
-              : distFromOuter <= 3
-              ? pureSilver
-              : distFromOuter <= 5
-              ? midMist
-              : steelLight;
-            putH(u, d, col);
-          }
-        }
-        // 左下方三根细碎流苏残影齿 (u = -12, -10, -8)
-        for (const uTooth of [-12, -10, -8]) {
-          putH(uTooth, 3, edgeWhite);
-          putH(uTooth, 4, uTooth === -12 ? pureSilver : steelLight);
-        }
-      } else {
-        // 收势帧：渐窄尖尾细碎残影
-        putH(-11, 1, steelLight);
-        for (let u = -10; u <= -3; u++) {
-          if (u % 2 === 0) putH(u, 0, steelLight);
-          putH(u, 1, u <= -7 ? midMist : pureSilver);
-          putH(u, 2, edgeWhite);
+      // 核心贯日剑芒枪束：中心极亮纯白 (#ffffff / #eef1f6)，上下侧翼流线银雾 (#dce1eb → #b8bfd0 → #9aa1b0)
+      for (let u = lanceStart; u <= lanceTip; u += 0.65) {
+        const uRatio = (u - lanceStart) / Math.max(1, lanceTip - lanceStart);
+        const halfW = (1 - Math.pow(uRatio, 1.35)) * 2.5 * fade + 0.35;
+        putS(hx + u * ux, hyW + u * uy, u >= rSword - 1 ? pureWhite : edgeWhite);
+        for (let v = 0.65; v <= halfW; v += 0.65) {
+          const vCol = v <= 1.1 ? (uRatio > 0.35 ? edgeWhite : pureSilver) : v <= 1.8 ? midMist : steelLight;
+          putS(hx + u * ux + v * nx, hyW + u * uy + v * ny, vCol);
+          putS(hx + u * ux - v * nx, hyW + u * uy - v * ny, vCol);
         }
       }
 
-      // 2) 前方水平横斩主刃带：偏刀尖与下沿外弧极亮纯白 (#eef1f6)，上沿与内侧呈细碎流线渐变 (#dce1eb → #b8bfd0 → #9aa1b0)
-      const uStart = isPeak ? -6 : -2;
-      const uBandEnd = isPeak ? 14 : 13;
-      for (let u = uStart; u <= uBandEnd; u++) {
-        // 上沿内侧细碎速度线 (d = -1)
-        if (u >= -2 && u <= 11 && (u % 2 !== 0 || u >= 8)) {
-          putH(u, -1, u >= 7 ? pureSilver : steelLight);
+      // 两道环绕剑身中前段的 3D 侧透视螺旋回风环 (Foreshortened Wind Vortex Rings)
+      const rings = [
+        { uCenter: 7.8 + retract * 1.5, ru: 1.5, rv: 4.8 * fade },
+        { uCenter: 13.6 + retract * 1.2, ru: 1.2, rv: 3.6 * fade },
+      ];
+      for (let ri = 0; ri < rings.length; ri++) {
+        const rg = rings[ri];
+        if (rg.rv < 1.2) continue;
+        for (let deg = 0; deg < 360; deg += 15) {
+          const th = rad(deg);
+          const du = Math.cos(th) * rg.ru;
+          const dv = Math.sin(th) * rg.rv;
+          const px = hx + (rg.uCenter + du) * ux + dv * nx;
+          const py = hyW + (rg.uCenter + du) * uy + dv * ny;
+          const isFrontHalf = Math.cos(th) >= -0.15;
+          const rCol = Math.abs(dv) >= rg.rv * 0.72 ? edgeWhite : isFrontHalf ? pureSilver : steelLight;
+          putSB(px, py, rCol, !isFrontHalf);
         }
-        // 中内层流线渐变与细碎间隙 (d = 0)
-        if (u >= 5 || (u + 8) % 3 !== 0) {
-          putH(u, 0, u >= 8 ? edgeWhite : u >= 2 ? pureSilver : midMist);
-        }
-        // 核心斩击线与外弧刃口 (d = 1, 2)：越靠近剑尖 (u >= 6) 越纯白饱满
-        putH(u, 1, u >= 3 ? edgeWhite : pureSilver);
-        putH(u, 2, edgeWhite);
-        if (isPeak && u >= -4 && u <= 12) {
-          if (u >= 4 || u % 2 === 0) {
-            putH(u, 3, u >= 6 ? edgeWhite : pureSilver);
-          }
-        }
-      }
-
-      // 3) 远端修长水平尖刺延伸（刀尖前方最白最锐利，向远端渐收为 1px 剑芒尖峰）
-      const uSpikeMax = isPeak ? 20 : 16;
-      for (let u = uBandEnd + 1; u <= uSpikeMax; u++) {
-        if (u <= uBandEnd + 2) {
-          putH(u, 1, edgeWhite);
-          putH(u, 2, edgeWhite);
-        } else {
-          putH(u, 2, edgeWhite);
-        }
-      }
-      if (isPeak) {
-        putH(uSpikeMax, 1, edgeWhite);
       }
       return;
     }
 
-    // 二段·斜撩上挑 (diagUp)、三段·举顶下劈 (heavySlam) 与蓄力剑气斩 (skillWave)：
-    // 1. 刀光宽度随离剑距离 (1 - u) 增大而单调减小：在剑身处 (u=1) 宽度约 9.8px，到尾端 (u=0) 收窄至 0.6px 锐利尖尾；
-    // 2. 偏刀尖外弧 (dOuter <= 1.5) 保持极亮纯白 (#eef1f6)，向内圈依次渐变 (#dce1eb → #b8bfd0 → #9aa1b0)，并刻画同心细碎流线纹理。
-    const steps = Math.max(34, Math.min(76, Math.round(Math.abs(diff) * 0.42)));
-    for (let s = 0; s <= steps; s++) {
-      const u = s / steps; // u=0 为最远端刀光尖尾，u=1 为当前剑身所在处
-      const ang = rad(a0 + diff * u);
-      const ux = Math.sin(ang), uy = Math.cos(ang);
+    // 3) 右键秘技·流云连环剑花 (swordFlourish3D)：
+    //    四道不同 3D 倾角平面的剑花刀光严格「依次出现、前消后现」（第1道斜上挽花 → 第2道反腕斜下掠花 → 第3道旋身绕背平环 → 第4道横剑破空定星），
+    //    绝不堆叠成静态乱团；后半弧写入 gBack 绕过人物背后，前半弧写入 gWep 掠过身前！
+    if (wp.slashType === 'swordFlourish3D') {
+      const aimRotDeg = wp.aimRot || 0;
+      const rotRad = rad(aimRotDeg);
+      const ca = Math.cos(rotRad), sa = Math.sin(rotRad);
+      const fp = wp.flourishPhase || 9;
+      const cxL = 2.6, cyL = -0.6;
 
-      // 外弧半径：贴合挥砍手臂外展轨迹，形成饱满大弧
-      const armSwingBoost = Math.sin(u * Math.PI) * 2.2 + (1 - u) * 2.4;
-      const rOuter = rMax + armSwingBoost;
+      // 根据 flourishPhase (1..12) 决定当前帧哪一道剑花处于爆发/收半/余丝阶段（严格依次接力出现）
+      const activeSlashSpecs = [];
+      // 第 1 道 (fp = 1..3)：左下绕背 → 右上斜挑 (-36° 倾角)
+      if (fp === 1) {
+        activeSlashSpecs.push({ id: 0, tilt: -36, rx: 17.5, ry: 6.4, aStart: -152, aSpan: 282, headU: 1.0, tailU: 0.0,  wMax: 3.6, fade: 1.0, star: [13.5, -8.5, 2] });
+      } else if (fp === 2) {
+        activeSlashSpecs.push({ id: 0, tilt: -36, rx: 17.5, ry: 6.4, aStart: -152, aSpan: 282, headU: 1.0, tailU: 0.50, wMax: 3.2, fade: 0.85, star: [13.5, -8.5, 1] });
+      } else if (fp === 3) {
+        activeSlashSpecs.push({ id: 0, tilt: -36, rx: 17.5, ry: 6.4, aStart: -152, aSpan: 282, headU: 1.0, tailU: 0.84, wMax: 2.0, fade: 0.55, star: null });
+      }
 
-      // 刀光径向宽度随距离剑身 (1 - u) 增大而显著收窄：u=0 时仅 0.6px（尖尾），u=1 时达 9.8px（宽刃）
-      const slashWidth = 0.55 + 9.25 * Math.pow(u, 1.42);
-      const rIn = Math.max(2.4, rOuter - slashWidth);
+      // 第 2 道 (fp = 3..5)：右上 → 左下反腕斜掠 (+36° 倾角)
+      if (fp === 3) {
+        activeSlashSpecs.push({ id: 1, tilt: 36,  rx: 17.8, ry: 6.4, aStart: 162,  aSpan: -284, headU: 1.0, tailU: 0.0,  wMax: 3.6, fade: 1.0, star: [13.2, 8.2, 2] });
+      } else if (fp === 4) {
+        activeSlashSpecs.push({ id: 1, tilt: 36,  rx: 17.8, ry: 6.4, aStart: 162,  aSpan: -284, headU: 1.0, tailU: 0.50, wMax: 3.2, fade: 0.85, star: [13.2, 8.2, 1] });
+      } else if (fp === 5) {
+        activeSlashSpecs.push({ id: 1, tilt: 36,  rx: 17.8, ry: 6.4, aStart: 162,  aSpan: -284, headU: 1.0, tailU: 0.85, wMax: 2.0, fade: 0.52, star: null });
+      }
 
-      for (let r = rOuter; r >= rIn; r -= 0.72) {
-        const dOuter = rOuter - r; // 距离刀尖外弧的径向深度 (0 = 刀尖外弧，slashWidth = 刀光内缘)
-        const tRad = slashWidth > 0.1 ? (dOuter / slashWidth) : 0; // 0 = 外弧刀尖侧，1 = 内弧近柄侧
-        const ringIdx = Math.round(dOuter * 1.35);
+      // 第 3 道 (fp = 5..8)：旋身绕背 → 回身水平环腰满月 (-7° 倾角)
+      if (fp === 5) {
+        activeSlashSpecs.push({ id: 2, tilt: -7,  rx: 18.4, ry: 5.0, aStart: -158, aSpan: 300, headU: 0.56, tailU: 0.0,  wMax: 3.2, fade: 0.92, star: [-12.0, -3.5, 1] });
+      } else if (fp === 6) {
+        activeSlashSpecs.push({ id: 2, tilt: -7,  rx: 18.4, ry: 5.0, aStart: -158, aSpan: 300, headU: 1.0,  tailU: 0.06, wMax: 3.8, fade: 1.0,  star: [16.2, -3.2, 2] });
+      } else if (fp === 7) {
+        activeSlashSpecs.push({ id: 2, tilt: -7,  rx: 18.4, ry: 5.0, aStart: -158, aSpan: 300, headU: 1.0,  tailU: 0.52, wMax: 3.2, fade: 0.85, star: [16.2, -3.2, 1] });
+      } else if (fp === 8) {
+        activeSlashSpecs.push({ id: 2, tilt: -7,  rx: 18.4, ry: 5.0, aStart: -158, aSpan: 300, headU: 1.0,  tailU: 0.82, wMax: 2.0, fade: 0.55, star: null });
+      }
 
-        // 细碎流线纹理过滤：
-        // - 外弧刀尖带 (dOuter <= 1.45) 连续不断裂，保证刀光外沿锐利流畅（仅在极尾端 u < 0.07 做星点破碎）；
-        // - 中内圈通过同心弧间隙 (ringIdx % 3 === 2) 与角度交错断续 ((s + ringIdx * 2) % 3) 形成细碎剑风纹理。
-        if (dOuter <= 1.45) {
-          if (u < 0.06 && s % 2 === 1) continue;
-        } else {
-          // 同心流线分层：每隔两道细弧留出一道细微呼吸间隙
-          if (ringIdx % 3 === 2 && u < 0.88) continue;
-          // 随离剑距离增大 (u 减小) 及靠近内缘 (tRad 增大)，纹理逐渐打散成细碎流苏与疾风线
-          if (u < 0.35 && (s + ringIdx) % 2 === 1) continue;
-          if (u < 0.72 && tRad > 0.42 && (s + ringIdx * 2) % 3 === 0) continue;
-          if (tRad > 0.76 && (s + ringIdx) % 2 === 0) continue;
+      // 第 4 道终结剑花 (fp = 9..12)：横剑剑诀定星 92° + 宽幅破空仰角大满月 (+14° 倾角)
+      if (fp === 9) {
+        activeSlashSpecs.push({ id: 3, tilt: 14,  rx: 19.2, ry: 6.2, aStart: -148, aSpan: 276, headU: 1.0, tailU: 0.0,  wMax: 4.2, fade: 1.0,  star: [17.5, 0, 3] });
+      } else if (fp === 10) {
+        activeSlashSpecs.push({ id: 3, tilt: 14,  rx: 19.2, ry: 6.2, aStart: -148, aSpan: 276, headU: 1.0, tailU: 0.14, wMax: 3.9, fade: 0.96, star: [17.5, 0, 3] });
+      } else if (fp === 11) {
+        activeSlashSpecs.push({ id: 3, tilt: 14,  rx: 19.2, ry: 6.2, aStart: -148, aSpan: 276, headU: 1.0, tailU: 0.52, wMax: 3.3, fade: 0.82, star: [17.5, 0, 2] });
+      } else if (fp >= 12) {
+        activeSlashSpecs.push({ id: 3, tilt: 14,  rx: 19.2, ry: 6.2, aStart: -148, aSpan: 276, headU: 1.0, tailU: 0.82, wMax: 2.2, fade: 0.55, star: [17.5, 0, 1] });
+      }
+
+      for (let pi = 0; pi < activeSlashSpecs.length; pi++) {
+        const ptArc = activeSlashSpecs[pi];
+        const tRadTilt = rad(ptArc.tilt);
+        const ct = Math.cos(tRadTilt), st = Math.sin(tRadTilt);
+        const pSteps = 60;
+        for (let s = 0; s <= pSteps; s++) {
+          const uN = s / pSteps; // 0 = 当前尾端 (最细)，1 = 当前刀头前锋 (最宽最亮)
+          const arcFrac = ptArc.tailU + (ptArc.headU - ptArc.tailU) * uN;
+          const angDeg = ptArc.aStart + ptArc.aSpan * arcFrac;
+          const th = rad(angDeg);
+          const ex = Math.sin(th) * ptArc.rx;
+          const ey = Math.cos(th) * ptArc.ry;
+          const lx0 = cxL + ex * ct - ey * st;
+          const ly0 = cyL + ex * st + ey * ct;
+          const len = Math.hypot(ex, ey) || 1;
+          const lnx = (ex * ct - ey * st) / len;
+          const lny = (ex * st + ey * ct) / len;
+          const tx = -lny, ty = lnx;
+          const toBack = lx0 < -1.2;
+
+          // 外缘毛边动感柔化
+          if (uN > 0.30 && s % 4 === 0 && ptArc.fade > 0.7) {
+            const burr = ((s + ptArc.id) % 2 === 0 ? 1.1 : 0.6) * ptArc.fade;
+            const bx = lx0 + lnx * 0.6 - tx * burr;
+            const by = ly0 + lny * 0.6 - ty * burr;
+            putSB(hx + bx * ca + by * sa, hyW - bx * sa + by * ca, pureSilver, toBack);
+          }
+
+          const bW = Math.max(0.55, ptArc.wMax * Math.pow(uN, 1.32) * ptArc.fade);
+          for (let d = 0; d <= bW; d += 0.58) {
+            const lx = lx0 - lnx * d;
+            const ly = ly0 - lny * d;
+            const rxPt = hx + lx * ca + ly * sa;
+            const ryPt = hyW - lx * sa + ly * ca;
+            let col;
+            if (d <= 0.9) {
+              col = uN > 0.62 ? pureWhite : uN > 0.24 ? edgeWhite : pureSilver;
+            } else if (d <= 1.9) {
+              col = uN > 0.42 ? edgeWhite : pureSilver;
+            } else {
+              if ((s + ptArc.id) % 2 === 1) continue;
+              col = d <= 2.6 ? midMist : steelLight;
+            }
+            putSB(rxPt, ryPt, col, toBack);
+          }
         }
 
-        // 偏刀尖外弧最白、向内圈与向尾端渐变的四阶冷白/银灰渐变：
+        // 每道剑花专属刀尖星芒（随该道刀光同步闪耀与收敛）
+        if (ptArc.star) {
+          const [sxL, syL, arm] = ptArc.star;
+          const scx = Math.round(hx + sxL * ca + syL * sa);
+          const scy = Math.round(hyW - sxL * sa + syL * ca);
+          putS(scx, scy, pureWhite);
+          for (let k = 1; k <= arm; k++) {
+            const cStar = k === 1 ? edgeWhite : pureSilver;
+            putS(scx + k, scy, cStar);
+            putS(scx - k, scy, cStar);
+            putS(scx, scy + k, cStar);
+            putS(scx, scy - k, cStar);
+          }
+        }
+      }
+
+      // 第 4 道终结定星阶段 (fp = 9..10)：仅添两缕纤细破空剑气余丝衬托 92° 横剑定式，绝不遮挡主刀弧
+      if (fp === 9 || fp === 10) {
+        const finRays = [116, 68];
+        for (let gi = 0; gi < finRays.length; gi++) {
+          const gAng = rad(finRays[gi]);
+          const gux = Math.sin(gAng), guy = Math.cos(gAng);
+          const gLen = fp === 9 ? 15.2 : 13.0;
+          for (let u = 6.0; u <= gLen; u += 1.4) {
+            const lx = u * gux, ly = u * guy;
+            const gCol = u > gLen - 2.2 ? edgeWhite : pureSilver;
+            putS(hx + lx * ca + ly * sa, hyW - lx * sa + ly * ca, gCol);
+          }
+        }
+      }
+      return;
+    }
+
+    // 4) 二段·掠月斜上挑 (swordUp3D / diagUp) & 三段·裂空斜下劈 (swordCleave3D / heavySlam)：
+    //    锚定 17.5px 修长直剑剑尖的 3D 倾斜平面椭圆弧刀光，绝无地面水平截断死线，支持随鼠标 360° 瞄准旋转与收半消散！
+    const isCleave = wp.slashType === 'swordCleave3D' || wp.slashType === 'heavySlam';
+    const maxBladeBand = (isCleave ? 11.4 : 10.4) * (1 - 0.28 * retract);
+    const tilt3D = isCleave ? 0.86 : 0.80;
+    const steps = 84;
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const ang = rad(a0 + diff * t);
+      const ux = Math.sin(ang), uy = Math.cos(ang);
+      const nx = uy, ny = -ux;
+
+      // t=1 处 perspScale = 1.0，严丝合缝贴合 17.5px 加长剑尖；中段呈自然 3D 斜面椭圆透视
+      const perspScale = 1.0 - (1.0 - tilt3D) * Math.sin(Math.PI * (1 - t)) * (1 - t * t);
+      const uOuter = rSword * perspScale;
+      const slashWidth = 0.55 + maxBladeBand * Math.pow(t, 1.42);
+      const uIn = Math.max(2.8, uOuter - slashWidth);
+
+      // 外缘切向飞散银白毛边
+      if (t >= 0.16 && t <= 0.95 && s % 4 === 0) {
+        const burrBack = (s % 8 === 0 ? 1.5 : 0.9) * (diff >= 0 ? -1 : 1);
+        putS(hx + (uOuter + 0.6) * ux + burrBack * nx, hyW + (uOuter + 0.6) * uy + burrBack * ny, s % 8 === 0 ? pureSilver : steelLight);
+      }
+
+      for (let r = uOuter; r >= uIn; r -= 0.62) {
+        const dOuter = uOuter - r;
+        const tRad = slashWidth > 0.1 ? (dOuter / slashWidth) : 0;
+        const ringIdx = Math.round(dOuter * 1.4);
+
+        if (dOuter <= 1.45) {
+          if (t < 0.06 && s % 2 === 1) continue;
+        } else {
+          if (ringIdx % 3 === 2 && t < 0.88) continue;
+          if (t < 0.34 && (s + ringIdx) % 2 === 1) continue;
+          if (t < 0.72 && tRad > 0.44 && (s + ringIdx * 2) % 3 === 0) continue;
+          if (tRad > 0.78 && (s + ringIdx) % 2 === 0) continue;
+        }
+
         let col;
         if (dOuter <= 1.45) {
-          // 偏刀尖外弧：主体极亮纯白 (#eef1f6)，仅在最末端尖梢 12% 渐隐为亮银 (#dce1eb / #9aa1b0)
-          col = u >= 0.14 ? edgeWhite : u >= 0.05 ? pureSilver : steelLight;
+          col = t >= 0.82 ? pureWhite : t >= 0.14 ? edgeWhite : t >= 0.05 ? pureSilver : steelLight;
         } else if (tRad <= 0.42) {
-          col = u >= 0.52 ? edgeWhite : u >= 0.24 ? pureSilver : midMist;
+          col = t >= 0.48 ? edgeWhite : t >= 0.22 ? pureSilver : midMist;
         } else if (tRad <= 0.74) {
-          col = u >= 0.72 ? pureSilver : u >= 0.38 ? midMist : steelLight;
+          col = t >= 0.68 ? pureSilver : t >= 0.36 ? midMist : steelLight;
         } else {
-          col = u >= 0.65 ? midMist : steelLight;
+          col = t >= 0.62 ? midMist : steelLight;
         }
 
-        const px = hx + ux * r, py = clamp(hyW + uy * r, 34, 75.5);
-        put(gWep, px, py, col);
+        putS(hx + ux * r, hyW + uy * r, col);
       }
     }
 
-    // 剑尖前缘再向外延伸 2px 锐利纯白剑芒尖峰，强化刀尖弧线高光
-    if (Math.abs(diff) >= 120) {
+    // 剑尖前缘向外延伸 2px 锐利纯白剑芒尖峰
+    if (Math.abs(diff) >= 110 && retract < 0.6) {
       const ang1 = rad(a1);
       const ux1 = Math.sin(ang1), uy1 = Math.cos(ang1);
-      put(gWep, hx + ux1 * 14.0, clamp(hyW + uy1 * 14.0, 34, 75.5), edgeWhite);
-      put(gWep, hx + ux1 * 15.0, clamp(hyW + uy1 * 15.0, 34, 75.5), edgeWhite);
+      putS(hx + ux1 * (rSword + 1.0), hyW + uy1 * (rSword + 1.0), pureWhite);
+      putS(hx + ux1 * (rSword + 2.0), hyW + uy1 * (rSword + 2.0), edgeWhite);
     }
 
-    // 三段·举顶下劈落地瞬间：在加长剑尖触地处激发纯白剑气激波与亮银细碎裂地残影
+    // 三段·裂空斜下劈冲击瞬间：在 17.5px 剑尖处激发十字裂空寒芒（沿剑身法向展开，绝不产生地面死板横线）
     if (wp.slamBurst > 0) {
       const ang = rad(wp.gunAng);
-      const tipX = hx + Math.sin(ang) * 12.2;
-      const tipY = Math.min(75.0, hyW + Math.cos(ang) * 12.2);
-      const hBurst = Math.round(5 * wp.slamBurst);
-      for (let dx = -3; dx <= 3; dx++) {
-        put(gWep, tipX + dx, tipY, Math.abs(dx) <= 1 ? edgeWhite : Math.abs(dx) === 2 ? pureSilver : steelLight);
-      }
-      for (let dy = 1; dy <= hBurst; dy++) {
-        put(gWep, tipX, tipY - dy, dy <= 2 ? edgeWhite : dy <= 4 ? pureSilver : steelLight);
-        if (dy <= hBurst - 1 && dy % 2 === 1) {
-          put(gWep, tipX - 2, tipY - dy, dy === 1 ? pureSilver : steelLight);
-          put(gWep, tipX + 2, tipY - dy, dy === 1 ? pureSilver : steelLight);
-        }
+      const ux = Math.sin(ang), uy = Math.cos(ang);
+      const nx = uy, ny = -ux;
+      const tipX = hx + ux * rSword;
+      const tipY = hyW + uy * rSword;
+      const hBurst = Math.max(1, Math.round(4 * wp.slamBurst));
+      putS(tipX, tipY, pureWhite);
+      for (let k = 1; k <= hBurst; k++) {
+        const cB = k <= 2 ? edgeWhite : k === 3 ? pureSilver : steelLight;
+        putS(tipX + nx * k, tipY + ny * k, cB);
+        putS(tipX - nx * k, tipY - ny * k, cB);
+        putS(tipX + ux * (k * 0.8), tipY + uy * (k * 0.8), cB);
       }
     }
   }
@@ -4466,9 +5190,16 @@
     const L = po.v34 ? 0 : (po.lean || 0), ub = po.bob || 0;
     const sdx = po.v34 ? 0 : (po.shoulderDx || wp.shoulderDx || 0);
     const sdy = po.v34 ? 0 : (po.shoulderDy || wp.shoulderDy || 0);
-    // 肩膀旋转中心 (sxN, sy)：单独剥离的前臂、后臂与武器均以此肩膀关节为支点随鼠标旋转
-    const sy = hy - 6 + ub + sdy;
-    const sxN = po.v34 ? 14 : 16 + L + sdx;
+    // 肩膀旋转中心 (sxN, sy)：单独剥离的前臂、后臂与武器均以此肩膀关节为支点随鼠标旋转；若处于勇猛狮子斩前空翻 (somersaultPhi > 0)，肩膀随躯干围绕 (16.5, hy-5) 同步旋转！
+    let sy = hy - 6 + ub + sdy;
+    let sxN = po.v34 ? 14 : 16 + L + sdx;
+    if (wp.somersaultPhi) {
+      const spRad = rad(wp.somersaultPhi);
+      const cp = Math.cos(spRad), sp = Math.sin(spRad);
+      const dx0 = sxN - 16.5, dy0 = sy - (hy - 5);
+      sxN = 16.5 + dx0 * cp - dy0 * sp;
+      sy = (hy - 5) + dx0 * sp + dy0 * cp;
+    }
     const rotRad = rad(po.v34 ? 0 : (wp.aimRot || 0));
     const sxF = po.v34 ? 17 : (sxN - Math.cos(rotRad));
     const syF = po.v34 ? sy : (sy + Math.sin(rotRad));
@@ -4481,26 +5212,107 @@
       put(gBack, fx, fy - 1, '#3e4556'); put(gBack, fx, fy - 2, '#ef7b3a'); put(gBack, fx + 1, fy - 2, '#6be6ff');
     }
 
-    // 2. 武器精灵图层 (weapon) —— 握持原点取整保证剑身上下双刃关于中轴严格像素对称
+    // 2. 武器精灵图层 (weapon & backArm 双持扩展) —— 握持原点取整保证像素对称与 45° 刚体平移
     const hx = Math.round(sxN + AN.wx);
     const hyW = Math.round(sy + AN.wy);
+    const hxF = Math.round(sxF + AF.wx);
+    const hyWF = Math.round(syF + AF.wy);
+    wp._hxF = hxF;
+    wp._hyWF = hyWF;
     const ux = Math.sin(rad(wp.gunAng)), uy = Math.cos(rad(wp.gunAng));
     const isBlade = wp.id === 'blade' || wp.id === 'sword';
+    const isDualBlades = wp.id === 'dualBlades';
     const isKatana = wp.id === 'katana';
     const isGreatsword = wp.id === 'greatsword';
-    const isMelee = isBlade || isKatana || isGreatsword;
+    const isMelee = isBlade || isDualBlades || isKatana || isGreatsword;
     const flipUp = (!isMelee && ux < -0.25) ? -1 : 1;
     const nx = uy * flipUp, ny = -ux * flipUp;
     const pt = (u, v) => [hx + u * ux + v * nx, hyW + u * uy + v * ny];
     const putW = (x, y, col) => {
       const rx = Math.round(x), ry = Math.round(y);
-      if (ry < 2 || ry > 75) return;
+      if (ry < 2 || ry >= GH - 1) return;
       put(gWep, rx, ry, col);
     };
 
     let muzzle = { x: Math.round(hx + 5.5 * ux + 1.2 * nx), y: Math.round(hyW + 5.5 * uy + 1.2 * ny), ux, uy };
 
-    if (isKatana) {
+    if (isDualBlades) {
+      // 先绘制双刀 3D 交替月牙 / 十字剪刀斩 / 360°陀螺环 / 鬼人乱舞刀光
+      drawSlashTrail(gWep, hx, hyW, wp, gBack);
+
+      // 猎鹰双曲剑绘制器：分别在副手远端手腕 (hxF, hyWF, offAng) 与主手近端手腕 (hx, hyW, gunAng) 绘制两柄弧形猎弯刀
+      const drawFalconScimitar = (targetG, wHx, wHy, angDeg, eDirVal, isSlashFlash, isOffHand) => {
+        const bRad = rad(angDeg);
+        const bux = Math.sin(bRad), buy = Math.cos(bRad);
+        const bnx = buy, bny = -bux;
+        const bPt = (u, v) => [wHx + u * bux + v * bnx, wHy + u * buy + v * bny];
+        const putG = (x, y, col) => {
+          const rx = Math.round(x), ry = Math.round(y);
+          if (ry < 2 || ry >= GH - 1) return;
+          put(targetG, rx, ry, col);
+        };
+
+        // 1) 反曲鹰爪配重柄头 + 暗铁缠绳短刀柄 (u = -2.2 .. 0.9)
+        const pPom = bPt(-2.2, -eDirVal * 0.5);
+        putG(pPom[0], pPom[1], '#7d8494');
+        for (let u = -1.8; u <= 0.9; u += 0.65) {
+          const pH = bPt(u, 0);
+          putG(pH[0], pH[1], Math.abs(u) < 0.4 ? '#6e2b32' : '#23262e');
+        }
+        // 2) S形猎鹰弯护手 (u = 1.2, v = -1.6 .. +1.6)
+        putG(bPt(1.2, -1.5)[0], bPt(1.2, -1.5)[1], '#686e7c');
+        putG(bPt(1.2, -0.7)[0], bPt(1.2, -0.7)[1], '#4a4f5c');
+        putG(bPt(1.2,  0.0)[0], bPt(1.2,  0.0)[1], '#8a91a1');
+        putG(bPt(1.2,  0.7)[0], bPt(1.2,  0.7)[1], '#4a4f5c');
+        putG(bPt(1.2,  1.5)[0], bPt(1.2,  1.5)[1], '#686e7c');
+
+        // 3) 猎鹰宽腹反曲弯刀身 (u = 1.8 .. 13.8)：前段宽腹微扬，凸侧雪白锋刃迎向挥砍方向 eDirVal，凹侧暗铁厚背
+        const colSpine = isOffHand ? '#323744' : '#3a3f4d';
+        const colFuller = isSlashFlash ? '#b8bfd0' : (isOffHand ? '#7d8494' : '#8a91a1');
+        const colEdge = isSlashFlash ? '#ffffff' : '#dce1eb';
+        for (let u = 1.8; u <= 13.0; u += 0.55) {
+          const curve = u > 4.0 ? Math.pow((u - 4.0) / 9.8, 1.4) * 1.85 : 0;
+          const bellyW = u >= 7.5 && u <= 11.8 ? 0.72 : 0.55;
+          const vCenter = -eDirVal * curve;
+          const pBack = bPt(u, vCenter - eDirVal * 0.55);
+          const pMid  = bPt(u, vCenter);
+          const pEdge = bPt(u, vCenter + eDirVal * bellyW);
+          putG(pBack[0], pBack[1], colSpine);
+          putG(pMid[0],  pMid[1],  colFuller);
+          putG(pEdge[0], pEdge[1], u >= 10.2 ? '#eef1f6' : colEdge);
+        }
+        const tip1 = bPt(13.4, -eDirVal * 1.75 + eDirVal * 0.25);
+        const tip2 = bPt(13.8, -eDirVal * 1.88);
+        putG(tip1[0], tip1[1], '#eef1f6');
+        putG(tip2[0], tip2[1], '#ffffff');
+
+        // 45° 刚体待机流光：仅在已有刀刃像素上改变一粒冷白高光，100% 不破坏刚体平移测试
+        if (wp.idleGlint >= 0) {
+          const gu = 2.4 + wp.idleGlint * 9.8;
+          const gc = gu > 4.0 ? Math.pow((gu - 4.0) / 9.8, 1.4) * 1.85 : 0;
+          const gp = bPt(gu, -eDirVal * gc);
+          recolor(targetG, gp[0], gp[1], '#ffffff');
+        }
+
+        // 鬼人蓄势寒芒：交刃蓄力时紧贴双曲刀刃闪烁冷白锋芒
+        if (wp.chargeLv > 0 && wp.slashArc < 0) {
+          for (let u = 3.2; u <= 12.2; u += 3.0) {
+            const gc = u > 4.0 ? Math.pow((u - 4.0) / 9.8, 1.4) * 1.85 : 0;
+            const gp = bPt(u, -eDirVal * gc + eDirVal * 1.1);
+            putG(gp[0], gp[1], wp.chargeLv >= 2 ? '#ffffff' : '#b8bfd0');
+          }
+        }
+        return tip2;
+      };
+
+      const offFlash = wp.offTrailFrom != null && Math.abs(wp.offAng - wp.offTrailFrom) >= 40;
+      const mainFlash = wp.trailFrom != null && Math.abs(wp.gunAng - wp.trailFrom) >= 40;
+      // 副手左刀：常态/后掠/回旋后半圈画在 gBack（身躯后方立体遮挡），交叉前斩/鬼人乱舞前掠时画在 gWep（身前清晰交错）
+      drawFalconScimitar(wp.offFront ? gWep : gBack, hxF, hyWF, wp.offAng, wp.offEdgeDir != null ? wp.offEdgeDir : 1, offFlash, true);
+      // 主手右刀：始终画在 gWep 前层
+      const mainTip = drawFalconScimitar(gWep, hx, hyW, wp.gunAng, wp.edgeDir != null ? wp.edgeDir : -1, mainFlash, false);
+      muzzle = { x: Math.round(mainTip[0]), y: Math.round(mainTip[1]), ux, uy };
+    } else if (isKatana) {
       // 先绘制长刀专属大开大合贴刃圆弧刀光 / 居合三道竖直撕裂月牙刀气
       drawSlashTrail(gWep, hx, hyW, wp);
 
@@ -4642,8 +5454,8 @@
         muzzle = { x: Math.round(pTip2[0]), y: Math.round(pTip2[1]), ux, uy };
       }
     } else if (isGreatsword) {
-      // 先绘制大剑专属 3D 势大力沉刀光残影（距刀越远越细 + 毛边 + 动态模糊 + 锯齿内缘）
-      drawSlashTrail(gWep, hx, hyW, wp);
+      // 先绘制大剑专属 3D 势大力沉刀光残影（含第4段 360° 大回旋斩前后双层环绕刀光）
+      drawSlashTrail(gWep, hx, hyW, wp, gBack);
 
       // 超巨型铁质大剑 (Colossal Iron Greatsword)：严格对齐参考图红线标示的门板巨剑比例（握持点后方长柄 u = -5.5..1.2，超宽剑刃 u = 2.2..24.5，横向全宽达 6.5~7px！）
       const isSlashFlash = wp.trailFrom != null && Math.abs(wp.gunAng - wp.trailFrom) >= 60;
@@ -4723,60 +5535,54 @@
         }
       }
 
-      // 当第2段崩地重砸触地停顿时 (gunAng <= 12°)，在地面巨剑周围绘制裂地金属压痕高光
-      if (!po.v34 && wp.gunAng >= 0 && wp.gunAng <= 12) {
-        for (let dx = 0; dx <= 8; dx++) {
-          putW(hx + dx + 1, 75, dx <= 5 ? '#eef1f6' : '#8a91a1');
-        }
-      }
-
       if (wp.idleGlint >= 0) {
         const gu = 3.2 + wp.idleGlint * 16.0;
         const gp = pt(gu, 0.8);
         recolor(gWep, gp[0], gp[1], '#ffffff');
       }
-      muzzle = { x: Math.round(pTip[0]), y: Math.round(Math.min(75, pTip[1])), ux, uy };
+      muzzle = { x: Math.round(pTip[0]), y: Math.round(pTip[1]), ux, uy };
     } else if (isBlade) {
-      // 先画紧贴剑身后方的纯白刀光残影扇面，再画对称双刃尖头长剑在最前缘
-      drawSlashTrail(gWep, hx, hyW, wp);
+      // 先画紧贴 17.5px 修长剑身的纯白 3D 刀光与千瓣剑花（传入 gBack 支持剑花绕背立体层次），再画对称双刃修长直剑在最前缘
+      drawSlashTrail(gWep, hx, hyW, wp, gBack);
 
-      // 对称双刃尖头铁质长剑（全长至菱形尖头 13.0px）：
-      // 1) 对称剑首配重球 (Pommel #686e7c) + 深炭剑柄 (Grip #2b2e36) + 上下严格对称的十字宽护手 (Crossguard v=±2.0 #4a4f5c)
-      const isSlashFlash = wp.trailFrom != null && Math.abs(wp.gunAng - wp.trailFrom) >= 60;
-      const pPom = pt(-2.0, 0), pHilt = pt(1.0, 0), pTip = pt(13.0, 0);
-      const pG1 = pt(1.5, 2.0), pG2 = pt(1.5, -2.0);
+      // 加长版对称双刃尖头铁质长剑（自剑首配重球 u=-2.8 至菱形锐尖 u=17.5，总长约 20.3px，上下严格对称）：
+      // 1) 对称剑首配重球 (Pommel u=-2.8 #686e7c) + 修长剑柄 (Grip u=-2.5..1.2 #2b2e36) + 上下严格对称十字宽护手 (Crossguard u=1.6, v=±2.0 #4a4f5c)
+      const isSlashFlash = wp.trailFrom != null && Math.abs(wp.gunAng - wp.trailFrom) >= 48;
+      const pPom = pt(-2.8, 0), pHilt = pt(1.2, 0), pTip = pt(17.5, 0);
+      const pG1 = pt(1.6, 2.0), pG2 = pt(1.6, -2.0);
       line(gWep, pPom[0], pPom[1], pHilt[0], pHilt[1], '#2b2e36', 1);
       put(gWep, pPom[0], pPom[1], '#686e7c');
       line(gWep, pG1[0], pG1[1], pG2[0], pG2[1], '#4a4f5c', 1);
-      put(gWep, pt(1.5, 0)[0], pt(1.5, 0)[1], '#7d8494');
+      put(gWep, pt(1.6, 0)[0], pt(1.6, 0)[1], '#7d8494');
 
-      // 2) 上下完全对称开刃的直剑剑身 (v = ±1.0 同色冷白铁刃 #dce1eb) + 中轴暗铁血槽剑脊 (v = 0 #4e5463 / #8a91a1) + 对称收尖剑头 (u=12..13, v=0)
+      // 2) 上下完全对称开刃的修长直剑剑身 (u = 2.2..15.2, v = ±1.0 同色冷白铁刃 #dce1eb) + 中轴暗铁血槽剑脊 (v = 0 #4e5463 / #8a91a1) + 对称收尖剑头 (u=16.0..17.5, v=0)
       const colCore = isSlashFlash ? '#dce1eb' : (wp.chargeLv >= 2 ? '#7d8494' : '#4e5463');
       const colBody = isSlashFlash ? '#f2f4f8' : (wp.chargeLv >= 1 ? '#b8bfd0' : '#8a91a1');
       const colEdge = '#dce1eb';
       const colTip = '#f2f4f8';
-      // 上下对称双刃 (u = 2.0 .. 11.0, v = ±1.0)
-      line(gWep, pt(2.0, -1.0)[0], pt(2.0, -1.0)[1], pt(11.0, -1.0)[0], pt(11.0, -1.0)[1], colEdge, 1);
-      line(gWep, pt(2.0,  1.0)[0], pt(2.0,  1.0)[1], pt(11.0,  1.0)[0], pt(11.0,  1.0)[1], colEdge, 1);
-      // 中轴血槽与剑脊 (u = 2.0 .. 11.0, v = 0)
-      line(gWep, pt(2.0, 0)[0], pt(2.0, 0)[1], pt(8.0, 0)[0], pt(8.0, 0)[1], colCore, 1);
-      line(gWep, pt(8.0, 0)[0], pt(8.0, 0)[1], pt(11.0, 0)[0], pt(11.0, 0)[1], colBody, 1);
-      // 对称收拢尖头部：从 3px 宽双刃对称收束至中轴 u=12.0 (#dce1eb) 与 u=13.0 (#f2f4f8) 锐利剑尖
-      put(gWep, pt(12.0, 0)[0], pt(12.0, 0)[1], colEdge);
+      // 上下对称双刃 (u = 2.2 .. 15.2, v = ±1.0)
+      line(gWep, pt(2.2, -1.0)[0], pt(2.2, -1.0)[1], pt(15.2, -1.0)[0], pt(15.2, -1.0)[1], colEdge, 1);
+      line(gWep, pt(2.2,  1.0)[0], pt(2.2,  1.0)[1], pt(15.2,  1.0)[0], pt(15.2,  1.0)[1], colEdge, 1);
+      // 中轴血槽与剑脊 (u = 2.2 .. 15.2, v = 0)
+      line(gWep, pt(2.2, 0)[0], pt(2.2, 0)[1], pt(10.8, 0)[0], pt(10.8, 0)[1], colCore, 1);
+      line(gWep, pt(10.8, 0)[0], pt(10.8, 0)[1], pt(15.2, 0)[0], pt(15.2, 0)[1], colBody, 1);
+      // 对称收拢修长尖头部：从 3px 宽双刃沿中轴对称收束至 u=16.0 (#dce1eb)、u=16.8 (#eef1f6) 与 u=17.5 (#f2f4f8) 锐利剑尖
+      put(gWep, pt(16.0, 0)[0], pt(16.0, 0)[1], colEdge);
+      put(gWep, pt(16.8, 0)[0], pt(16.8, 0)[1], '#eef1f6');
       put(gWep, pTip[0], pTip[1], colTip);
 
       // 45° 持剑待机专属剑脊冷光：剑身像素完全刚体锁定，仅在已有剑身像素上改变一粒冷白高光颜色
       if (wp.idleGlint >= 0) {
-        const gu = 2.6 + wp.idleGlint * 9.0;
+        const gu = 2.8 + wp.idleGlint * 13.0;
         const gp = pt(gu, 0);
         recolor(gWep, gp[0], gp[1], '#f2f4f8');
       }
 
-      // 蓄力剑气聚能寒芒：紧贴对称铁剑两侧流动的冷白/铁灰剑芒
+      // 剑诀聚能寒芒：紧贴修长直剑两侧流动的冷白/铁灰星芒
       if (wp.chargeLv > 0 && wp.slashArc < 0) {
-        const stride = wp.chargeLv >= 2 ? 1.8 : 2.8;
+        const stride = wp.chargeLv >= 2 ? 2.0 : 3.2;
         const phase = Math.round(wp.p * 8) % 2;
-        for (let u = 2.6; u <= 12.0; u += stride) {
+        for (let u = 2.8; u <= 16.0; u += stride) {
           const side = ((Math.round(u) + phase) % 2 === 0 ? 1 : -1) * 1.25;
           const gp = pt(u, side);
           put(gWep, gp[0], gp[1], wp.chargeLv >= 2 ? '#eef1f6' : '#9aa1b0');
@@ -4842,8 +5648,35 @@
     return { muzzle, shoulder: { x: sxN, y: sy }, wp };
   }
 
+  function rotateGrid(src, phiDeg, cx, cy) {
+    const o = mkG(), cc = Math.cos(rad(phiDeg)), ss = Math.sin(rad(phiDeg));
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cy, sx = Math.floor(cx + dx * cc + dy * ss), sy = Math.floor(cy - dx * ss + dy * cc);
+      if (sx >= 0 && sy >= 0 && sx < GW && sy < GH && src[sy][sx]) o[y][x] = src[sy][sx];
+    }
+    for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) {
+      if (!o[y][x] && ((o[y][x - 1] && o[y][x + 1] && (o[y - 1][x] || o[y + 1][x])) || (o[y - 1][x] && o[y + 1][x] && (o[y][x - 1] || o[y][x + 1])))) {
+        o[y][x] = o[y][x - 1] || o[y - 1][x];
+      }
+    }
+    return o;
+  }
+
+  function mirrorGridX(src, pivotX) {
+    const o = mkG();
+    const twoPivot = Math.round(pivotX * 2);
+    for (let y = 0; y < GH; y++) {
+      for (let x = 0; x < GW; x++) {
+        if (!src[y][x]) continue;
+        const mx = twoPivot - x;
+        if (mx >= 0 && mx < GW) o[y][mx] = src[y][x];
+      }
+    }
+    return o;
+  }
+
   function charLayers(spec, po, hy, phi, opts) {
-    const backArm = mkG(), body = mkG(), weapon = mkG(), frontArm = mkG(), fx = mkG(), detachedFX = mkG(), composite = mkG();
+    let backArm = mkG(), body = mkG(), weapon = mkG(), frontArm = mkG(), fx = mkG(), detachedFX = mkG(), composite = mkG();
     const hasWep = !!(opts && opts.weapon && opts.weapon.id && opts.weapon.id !== 'none' && !phi && !(po && po.inFlip));
     const includeFx = !(opts && opts.noFxLayer);
     const includeDetachedFX = !!(opts && opts.includeDetachedFX);
@@ -4852,17 +5685,7 @@
       drawAlienFXLayer(fx, spec, po, hy + GOFF, opts);
       let out = body;
       if (phi) {
-        const o = mkG(), cc = Math.cos(rad(phi)), ss = Math.sin(rad(phi)), cx = 17.5 + GX, cy = hy + GOFF - 4;
-        for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
-          const dx = x + 0.5 - cx, dy = y + 0.5 - cy, sx = Math.floor(cx + dx * cc + dy * ss), sy = Math.floor(cy - dx * ss + dy * cc);
-          if (sx >= 0 && sy >= 0 && sx < GW && sy < GH && body[sy][sx]) o[y][x] = body[sy][sx];
-        }
-        for (let y = 1; y < GH - 1; y++) for (let x = 1; x < GW - 1; x++) {
-          if (!o[y][x] && ((o[y][x - 1] && o[y][x + 1] && (o[y - 1][x] || o[y + 1][x])) || (o[y - 1][x] && o[y + 1][x] && (o[y][x - 1] || o[y][x + 1])))) {
-            o[y][x] = o[y][x - 1] || o[y - 1][x];
-          }
-        }
-        out = o;
+        out = rotateGrid(body, phi, 17.5 + GX, hy + GOFF - 4);
       }
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
         if (out[y][x]) composite[y][x] = out[y][x];
@@ -4876,6 +5699,17 @@
     const activeHy = gHy(spec.build, norm(activePo)) - meleeBody.hopY;
     drawCharacter(body, spec, activePo, activeHy + GOFF, Object.assign({}, opts, { noArms: true }));
     drawAlienFXLayer(fx, spec, activePo, activeHy + GOFF, opts);
+
+    // 大剑回旋斩中途转身帧 (spinFlip = true)：人物躯干与外星微特效沿髋部中轴线 (16 + GX) 快速翻转面向后方，下一拍再转回正面！
+    if (meleeBody.spinFlip) {
+      body = mirrorGridX(body, 16 + GX);
+      fx = mirrorGridX(fx, 16 + GX);
+    }
+    // 大剑右键「勇猛狮子斩」空中 360° 前空翻阶段 (somersaultPhi > 0)：复用二段跳空翻旋转核旋转躯干与微特效！
+    if (meleeBody.somersaultPhi) {
+      body = rotateGrid(body, meleeBody.somersaultPhi, 16.5 + GX, activeHy + GOFF - 5);
+      fx = rotateGrid(fx, meleeBody.somersaultPhi, 16.5 + GX, activeHy + GOFF - 5);
+    }
 
     const meta = drawWeaponLayers(backArm, weapon, frontArm, spec, activePo, activeHy + GOFF, opts);
     // 若长刀右键秘技处于序列帧环绕刀光阶段 (orbitFXPhase >= 0)，将其绘制在独立的 detachedFX 特效图层上（正对人物正前方胸腰高度，不直接贴死在 weapon 图层上，不随人物世界移动！）
@@ -4897,14 +5731,15 @@
         }
       }
     }
-    if (spec.species === 'cathode') {
+    if (spec.species === 'cathode' && !meleeBody.somersaultPhi) {
       const cv = resolveCathodeStyle(spec);
       const ub = activePo.bob || 0, L = activePo.v34 ? 0 : (activePo.lean || 0);
       const ledY = activeHy + GOFF - 4 + ub;
       const shf = activePo.v34 ? 0 : Math.round(L * (activeHy + GOFF - 3 - ledY) / 4);
-      put(composite, 15 + shf, ledY, cv.ledCol || '#6be6ff');
+      const ledX = meleeBody.spinFlip ? (32 - (15 + shf)) : (15 + shf);
+      put(composite, ledX, ledY, cv.ledCol || '#6be6ff');
     }
-    return { backArm, body, weapon, frontArm, fx, alienFX: fx, detachedFX, composite, muzzle: meta.muzzle, shoulder: meta.shoulder, wp: meta.wp, decoupled: true };
+    return { backArm, body, weapon, frontArm, fx, alienFX: fx, detachedFX, composite, muzzle: meta.muzzle, shoulder: meta.shoulder, wp: meta.wp, spinFlip: meleeBody.spinFlip, somersaultPhi: meleeBody.somersaultPhi, decoupled: true };
   }
 
   function charGrid(spec, po, hy, phi, opts) {
@@ -5561,6 +6396,22 @@
         head: [look ? 1 : 0, talk && sn(t * 7) > 0.5 ? 1 : 0],
       });
     },
+    // 铁质双刀（双刀模组·4连+鬼人乱舞）45° 待机：低重心鬼人双牙戒备站姿，主手前探握右曲刀（na: [-24, 52]）、副手反握左曲刀掠于侧后腰（fa: [28, -22]），随呼吸整像素刚体平移
+    dualBlades(t, talk) {
+      const u = ph(t, 2.4) / 2.4, s = sn(u * Math.PI * 2), c = Math.cos(u * Math.PI * 2);
+      const bob = (u >= 0.30 && u < 0.72) ? -1 : 0;
+      const shift = u >= 0.54 && u < 0.88;
+      const look = u >= 0.66 && u < 0.90;
+      return n34({
+        nl: shift ? [-10, -5] : [-6, -3],
+        fl: shift ? [11, 5] : [8, 4],
+        na: [-24, 52],
+        fa: [28, -22],
+        tail: [70 + 5 * s, 84 + 6 * c],
+        bob,
+        head: [look ? 1 : 0, talk && sn(t * 7) > 0.5 ? 1 : 0],
+      });
+    },
     // 脉冲手枪（手枪模组）45° 待机：神枪手 45° 战术戒备站姿，双臂与枪身角度固定，随上身呼吸(bob)整把枪刚体上下平移
     pistol(t, talk) {
       const u = ph(t, 2.2) / 2.2, s = sn(u * Math.PI * 2), c = Math.cos(u * Math.PI * 2);
@@ -5631,5 +6482,5 @@
     };
   }
 
-  return { GW, GH, GX, GOFF, FOOT, SHY, SKELETON, WEAPONS, ALIEN_SPECIES, MYCO_VARIANTS, CATHODE_VARIANTS, CINDER_VARIANTS, drawAlienHead, drawAlienTorso, drawAlienFXLayer, drawKatanaOrbitFX, BASE_HEAD, BASE_HEAD34, HEADS, HEADS34, HATS, HATS34, headLayerBreakdown, IDLES, IDLES34, WEAPON_IDLES34, SWORD_ACT_KF, KATANA_ACT_KF, GREATSWORD_ACT_KF, sampleSwordKF, SUIT: SU, drawCharacter, charLayers, charGrid, computeWeaponPose, computeMeleeBodyPose, poser, blend, norm, gHy, rad, clamp };
+  return { GW, GH, GX, GOFF, FOOT, SHY, SKELETON, WEAPONS, ALIEN_SPECIES, MYCO_VARIANTS, CATHODE_VARIANTS, CINDER_VARIANTS, drawAlienHead, drawAlienTorso, drawAlienFXLayer, drawKatanaOrbitFX, BASE_HEAD, BASE_HEAD34, HEADS, HEADS34, HATS, HATS34, headLayerBreakdown, IDLES, IDLES34, WEAPON_IDLES34, SWORD_ACT_KF, DUAL_BLADES_ACT_KF, KATANA_ACT_KF, GREATSWORD_ACT_KF, sampleSwordKF, SUIT: SU, drawCharacter, charLayers, charGrid, computeWeaponPose, computeMeleeBodyPose, poser, blend, norm, gHy, rad, clamp };
 });
